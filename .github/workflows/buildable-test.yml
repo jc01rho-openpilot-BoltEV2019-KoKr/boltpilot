@@ -11,7 +11,15 @@ on:
     - feature/*  # Support wildcard matching
     - release
     - comma2_Eon-final
-  pull_request_target:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+      - labeled
+      - unlabeled
+      - ready_for_review
 
 
 

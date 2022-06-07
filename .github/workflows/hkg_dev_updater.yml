@@ -33,7 +33,7 @@ jobs:
         with:
           target_sync_branch: hkg_dev
           # REQUIRED 'target_repo_token' exactly like this!
-          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+          target_repo_token: ${{ secrets.REPO_SECRET }}
           upstream_sync_branch: hkg_dev
           upstream_sync_repo: neokii/npilot
   make_pr_call:

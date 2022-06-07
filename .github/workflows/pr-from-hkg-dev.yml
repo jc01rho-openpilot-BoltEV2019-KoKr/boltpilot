@@ -34,7 +34,7 @@ jobs:
         with:
           source_branch: "hkg_dev"
           destination_branch: "feature/0815"
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.REPO_SECRET }}
           pr_reviewer: "jc01rho"                         # Comma-separated list (no spaces)
 #          pr_assignee: "jc01rho"
           pr_label: "automerge"
@@ -45,7 +45,7 @@ jobs:
     steps:
       - uses: reitermarkus/automerge@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.REPO_SECRET }}
           merge-method: merge
           do-not-merge-labels: never-merge
           required-labels: automerge
