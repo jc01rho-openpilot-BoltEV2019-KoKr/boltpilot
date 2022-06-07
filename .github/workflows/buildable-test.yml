@@ -11,7 +11,7 @@ on:
     - feature/*  # Support wildcard matching
     - release
     - comma2_Eon-final
-  pull_request:
+  pull_request_target:
 
 
 
