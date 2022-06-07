@@ -38,6 +38,5 @@ jobs:
           upstream_sync_repo: neokii/npilot
   make_pr_call:
     needs: pull_from_neokii # ${{needs.job1.outputs.output1}}
-    if: needs.pull_from_neokii.outputs.has_new_commits == 'true'
     uses: ./.github/workflows/pr-from-hkg-dev.yml
 
