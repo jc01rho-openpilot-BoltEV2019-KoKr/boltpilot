@@ -39,7 +39,15 @@ jobs:
 #          pr_assignee: "jc01rho"
           pr_label: "automerge"
 
-
+  automerge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: reitermarkus/automerge@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          merge-method: merge
+          do-not-merge-labels: never-merge
+          required-labels: automerge
 
 
 #      - name: set remote and merge
