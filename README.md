@@ -1,19 +1,11 @@
-
-**이 브랜치는 콤마3 전용입니다.
-콤마2/이온 은 hkg_0814_c2 브랜치를 이용하세요.**
-
-**This branch is comma3 only.
-For comma2/eon, use hkg_0814_c2.**
+**This repository is for Hyundai/Kia/Genesis.**
 
 
-**This is based on xx979xx for Hyundai, Kia, Genesis.**
+It is open source and inherits MIT license.  By installing this software you accept all responsibility for anything that might occur while you use it.  All contributors to this repository are not liable.  <b>Use at your own risk.</b>
 
-https://github.com/xx979xx/openpilot
+---
+#
 
-It is open source and inherits MIT license.  By installing this software you accept all responsibility for anything that might occur while you use it.  All contributors to this fork are not liable.  <b>Use at your own risk.</b>
-
-
-------------------------------------------------------
 
 
 ![](https://i.imgur.com/b0ZyIx5.jpg)

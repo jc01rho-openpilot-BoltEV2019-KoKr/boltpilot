@@ -16,15 +16,15 @@ if __name__ == "__main__":
   for p in procs:
     managed_processes[p].start()
   
-  pm = messaging.PubMaster(['controlsState', 'deviceState', 'pandaStates', 'carParams', 'carState'])
+  pm = messaging.PubMaster(['controlsState', 'deviceState', 'pandaStates', 'carParams', 'carState', 'carControl'])
   
-  msgs = {s: messaging.new_message(s) for s in ['controlsState', 'deviceState', 'carParams']}
+  msgs = {s: messaging.new_message(s) for s in ['controlsState', 'deviceState', 'carParams', 'carControl']}
   msgs['deviceState'].deviceState.started = True
   msgs['carParams'].carParams.openpilotLongitudinalControl = True
   
   msgs['pandaStates'] = messaging.new_message('pandaStates', 1)
   msgs['pandaStates'].pandaStates[0].ignitionLine = True
-  msgs['pandaStates'].pandaStates[0].pandaType = log.PandaState.PandaType.uno
+  msgs['pandaStates'].pandaStates[0].pandaType = log.PandaState.PandaType.dos
   
   speed = 0.
   try:
@@ -37,6 +37,8 @@ if __name__ == "__main__":
       speed += 0.02
       if speed > 40.:
         speed = 0.
+
+      msgs['carControl'].carControl.debugText = "Speed: {}\nTest\nTEST...TEST".format(speed)
       
       for s in msgs:
         pm.send(s, msgs[s])

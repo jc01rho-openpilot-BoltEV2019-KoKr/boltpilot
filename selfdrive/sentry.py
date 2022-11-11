@@ -9,8 +9,7 @@ from system.hardware import HARDWARE, PC
 from system.swaglog import cloudlog
 from system.version import get_branch, get_commit, get_origin, get_version, \
                               is_comma_remote, is_dirty, is_tested_branch
-import datetime
-import traceback
+
 
 
 class SentryProject(Enum):
@@ -31,7 +30,9 @@ def report_tombstone(fn: str, message: str, contents: str) -> None:
 
 
 def capture_exception(*args, **kwargs) -> None:
-  #cloudlog.error("crash", exc_info=kwargs.get('exc_info', 1))
+
+  import datetime
+  import traceback
 
   try:
     with open('/data/log/last_exception', 'w') as f:
@@ -39,12 +40,6 @@ def capture_exception(*args, **kwargs) -> None:
       f.write(now.strftime('[%Y-%m-%d %H:%M:%S]') + "\n\n" + str(traceback.format_exc()))
   except Exception:
     pass
-
-  #try:
-  #  sentry_sdk.capture_exception(*args, **kwargs)
-  #  sentry_sdk.flush()  # https://github.com/getsentry/sentry-python/issues/291
-  #except Exception:
-  #  cloudlog.exception("sentry exception")
 
 
 def set_tag(key: str, value: str) -> None:

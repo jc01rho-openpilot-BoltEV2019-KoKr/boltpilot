@@ -10,7 +10,7 @@ Q_DECLARE_METATYPE(ItemStatus);
 
 class Sidebar : public QFrame {
   Q_OBJECT
-  Q_PROPERTY(ItemStatus storageStatus MEMBER storage_status NOTIFY valueChanged);
+  Q_PROPERTY(ItemStatus connectStatus MEMBER connect_status NOTIFY valueChanged);
   Q_PROPERTY(ItemStatus pandaStatus MEMBER panda_status NOTIFY valueChanged);
   Q_PROPERTY(ItemStatus tempStatus MEMBER temp_status NOTIFY valueChanged);
   Q_PROPERTY(QString netType MEMBER net_type NOTIFY valueChanged);
@@ -37,13 +37,13 @@ protected:
   QPixmap home_img, flag_img, settings_img;
   bool onroad, flag_pressed, settings_pressed;
   const QMap<cereal::DeviceState::NetworkType, QString> network_type = {
-    {cereal::DeviceState::NetworkType::NONE, "--"},
-    {cereal::DeviceState::NetworkType::WIFI, "Wi-Fi"},
-    {cereal::DeviceState::NetworkType::ETHERNET, "ETH"},
-    {cereal::DeviceState::NetworkType::CELL2_G, "2G"},
-    {cereal::DeviceState::NetworkType::CELL3_G, "3G"},
-    {cereal::DeviceState::NetworkType::CELL4_G, "LTE"},
-    {cereal::DeviceState::NetworkType::CELL5_G, "5G"}
+    {cereal::DeviceState::NetworkType::NONE, tr("--")},
+    {cereal::DeviceState::NetworkType::WIFI, tr("Wi-Fi")},
+    {cereal::DeviceState::NetworkType::ETHERNET, tr("ETH")},
+    {cereal::DeviceState::NetworkType::CELL2_G, tr("2G")},
+    {cereal::DeviceState::NetworkType::CELL3_G, tr("3G")},
+    {cereal::DeviceState::NetworkType::CELL4_G, tr("LTE")},
+    {cereal::DeviceState::NetworkType::CELL5_G, tr("5G")}
   };
 
   const QRect home_btn = QRect(60, 860, 180, 180);
@@ -52,7 +52,7 @@ protected:
   const QColor warning_color = QColor(218, 202, 37);
   const QColor danger_color = QColor(201, 34, 49);
 
-  ItemStatus storage_status, panda_status, temp_status;
+  ItemStatus connect_status, panda_status, temp_status;
   QString net_type;
   int net_strength = 0;
   QString wifi_addr = "--";

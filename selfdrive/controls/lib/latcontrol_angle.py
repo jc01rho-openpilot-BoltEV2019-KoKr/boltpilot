@@ -1,4 +1,5 @@
 import math
+
 from cereal import log
 from selfdrive.controls.lib.latcontrol import LatControl, MIN_STEER_SPEED
 

@@ -4,26 +4,24 @@ from cereal import car
 from common.conversions import Conversions as CV
 from common.numpy_fast import clip, interp
 from common.realtime import DT_MDL
+from selfdrive.controls.ntune import ntune_common_get
 from selfdrive.modeld.constants import T_IDXS
-from selfdrive.ntune import ntune_common_get
 
 # WARNING: this value was determined based on the model's training distribution,
 #          model predictions above this speed can be unpredictable
-# kph
-V_CRUISE_MAX = 145
-V_CRUISE_MIN = 30
-V_CRUISE_DELTA_MI = 5 * CV.MPH_TO_KPH
-V_CRUISE_DELTA_KM = 10
-V_CRUISE_ENABLE_MIN = 30
+V_CRUISE_MAX = 145  # kph
+V_CRUISE_MIN = 30  # kph
+V_CRUISE_ENABLE_MIN = 30  # kph
 V_CRUISE_INITIAL = 255  # kph
 
+MIN_SPEED = 1.0
 LAT_MPC_N = 16
 LON_MPC_N = 32
 CONTROL_N = 17
 CAR_ROTATION_RADIUS = 0.0
 
 # EU guidelines
-MAX_LATERAL_JERK = 20.0
+MAX_LATERAL_JERK = 10.0
 
 ButtonType = car.CarState.ButtonEvent.Type
 CRUISE_LONG_PRESS = 50
@@ -106,10 +104,11 @@ def get_lag_adjusted_curvature(CP, v_ego, psis, curvatures, curvature_rates):
     psis = [0.0]*CONTROL_N
     curvatures = [0.0]*CONTROL_N
     curvature_rates = [0.0]*CONTROL_N
-  v_ego = max(v_ego, 0.1)
+  v_ego = max(MIN_SPEED, v_ego)
 
   # TODO this needs more thought, use .2s extra for now to estimate other delays
   delay = ntune_common_get('steerActuatorDelay') + .2
+
   # MPC can plan to turn the wheel and turn back before t_delay. This means
   # in high delay cases some corrections never even get commanded. So just use
   # psi to calculate a simple linearization of desired curvature

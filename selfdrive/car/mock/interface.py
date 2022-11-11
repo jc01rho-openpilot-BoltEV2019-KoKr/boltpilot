@@ -78,7 +78,7 @@ class CarInterface(CarInterfaceBase):
 
     return ret
 
-  def apply(self, c, controls):
+  def apply(self, c):
     # in mock no carcontrols
     actuators = car.CarControl.Actuators.new_message()
     return actuators, []

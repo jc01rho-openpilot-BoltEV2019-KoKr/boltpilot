@@ -419,10 +419,10 @@ void MapInstructions::updateDistance(float d) {
   if (uiState()->scene.is_metric) {
     if (d > 500) {
       distance_str.setNum(d / 1000, 'f', 1);
-      distance_str += " km";
+      distance_str += tr(" km");
     } else {
       distance_str.setNum(50 * int(d / 50));
-      distance_str += " m";
+      distance_str += tr(" m");
     }
   } else {
     float miles = d * METER_TO_MILE;
@@ -430,10 +430,10 @@ void MapInstructions::updateDistance(float d) {
 
     if (feet > 500) {
       distance_str.setNum(miles, 'f', 1);
-      distance_str += " mi";
+      distance_str += tr(" mi");
     } else {
       distance_str.setNum(50 * int(feet / 50));
-      distance_str += " ft";
+      distance_str += tr(" ft");
     }
   }
 
@@ -653,10 +653,10 @@ void MapETA::updateETA(float s, float s_typical, float d) {
   float num = 0;
   if (uiState()->scene.is_metric) {
     num = d / 1000.0;
-    distance_unit->setText("km");
+    distance_unit->setText(tr("km"));
   } else {
     num = d * METER_TO_MILE;
-    distance_unit->setText("mi");
+    distance_unit->setText(tr("mi"));
   }
 
   distance_str.setNum(num, 'f', num < 100 ? 1 : 0);

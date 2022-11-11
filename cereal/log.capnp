@@ -473,6 +473,7 @@ struct PandaState @0xa7649e2575e4591e {
     dos @6;
     redPanda @7;
     redPandaV2 @8;
+    tres @9;
   }
 
   enum HarnessStatus {
@@ -591,6 +592,7 @@ struct LiveCalibrationData {
   # the direction of travel vector in device frame
   rpyCalib @7 :List(Float32);
   rpyCalibSpread @8 :List(Float32);
+  wideFromDeviceEuler @10 :List(Float32);
 
   warpMatrixDEPRECATED @0 :List(Float32);
   warpMatrix2DEPRECATED @5 :List(Float32);
@@ -655,22 +657,6 @@ struct ControlsState @0x97ff69c53601abf1 {
     debugState @59 :LateralDebugState;
     torqueState @60 :LateralTorqueState;
   }
-
-  angleSteers @64 :Float32;
-  applyAccel @65 :Float32;
-  aReqValue @66 :Float32;
-  aReqValueMin @67 :Float32;
-  aReqValueMax @68 :Float32;
-
-  steerRatio @69 :Float32;
-  steerActuatorDelay @70 :Float32;
-  sccGasFactor @71 :Float32;
-  sccBrakeFactor @72 :Float32;
-  sccCurvatureFactor @73 :Float32;
-
-  sccStockCamAct @74 :Float32;
-  sccStockCamStatus @75 :Float32;
-
 
   enum OpenpilotState @0xdbe58b96d2d1ac61 {
     disabled @0;
@@ -825,6 +811,9 @@ struct ModelDataV2 {
 
   meta @12 :MetaData;
 
+  # Model perceived motion
+  temporalPose @21 :Pose;
+
   # All SI units and in device frame
   struct XYZTData {
     x @0 :List(Float32);
@@ -887,6 +876,13 @@ struct ModelDataV2 {
     brake3MetersPerSecondSquaredProbs @4 :List(Float32);
     brake4MetersPerSecondSquaredProbs @5 :List(Float32);
     brake5MetersPerSecondSquaredProbs @6 :List(Float32);
+  }
+
+  struct Pose {
+    trans @0 :List(Float32); # m/s in device frame
+    rot @1 :List(Float32); # rad/s in device frame
+    transStd @2 :List(Float32); # std m/s in device frame
+    rotStd @3 :List(Float32); # std rad/s in device frame
   }
 }
 
@@ -989,11 +985,11 @@ struct LongitudinalPlan @0xe00b5b3eba12876c {
 
 struct LateralPlan @0xe1e9318e2ae8b51e {
   modelMonoTime @31 :UInt64;
-  laneWidth @0 :Float32;
-  lProb @5 :Float32;
-  rProb @7 :Float32;
+  laneWidthDEPRECATED @0 :Float32;
+  lProbDEPRECATED @5 :Float32;
+  rProbDEPRECATED @7 :Float32;
   dPathPoints @20 :List(Float32);
-  dProb @21 :Float32;
+  dProbDEPRECATED @21 :Float32;
 
   mpcSolutionValid @9 :Bool;
   desire @17 :Desire;
@@ -1871,6 +1867,8 @@ struct CameraOdometry {
   rot @1 :List(Float32); # rad/s in device frame
   transStd @2 :List(Float32); # std m/s in device frame
   rotStd @3 :List(Float32); # std rad/s in device frame
+  wideFromDeviceEuler @6 :List(Float32);
+  wideFromDeviceEulerStd @7 :List(Float32);
 }
 
 struct Sentinel {
@@ -1882,6 +1880,10 @@ struct Sentinel {
   }
   type @0 :SentinelType;
   signal @1 :Int32;
+}
+
+struct UIDebug {
+  drawTimeMillis @0 :Float32;
 }
 
 struct ManagerState {
@@ -1963,21 +1965,6 @@ struct EncodeData {
 struct UserFlag {
 }
 
-struct RoadLimitSpeed {
-    active @0 :Int16;
-    roadLimitSpeed @1 :Int16;
-    isHighway @2 :Bool;
-    camType @3 :Int16;
-    camLimitSpeedLeftDist @4 :Int16;
-    camLimitSpeed @5 :Int16;
-    sectionLimitSpeed @6 :Int16;
-    sectionLeftDist @7 :Int16;
-    sectionAvgSpeed @8 :Int16;
-    sectionLeftTime @9 :Int16;
-    sectionAdjustSpeed @10 :Bool;
-    camSpeedFactor @11 :Float32;
-}
-
 struct Event {
   logMonoTime @0 :UInt64;  # nanoseconds
   valid @67 :Bool = true;
@@ -2052,11 +2039,12 @@ struct Event {
     navRoute @83 :NavRoute;
     navThumbnail @84: Thumbnail;
 
-    # user flags
+    # UI services
     userFlag @93 :UserFlag;
+    uiDebug @102 :UIDebug;
     
     # neokii
-    roadLimitSpeed @102 :RoadLimitSpeed;
+    naviData @103 :NaviData;
 
     # *********** debug ***********
     testJoystick @52 :Joystick;
@@ -2104,4 +2092,19 @@ struct Event {
     driverStateDEPRECATED @59 :DriverStateDEPRECATED;
     sensorEventsDEPRECATED @11 :List(SensorEventData);
   }
+}
+
+struct NaviData {
+    active @0 :Int16;
+    roadLimitSpeed @1 :Int16;
+    isHighway @2 :Bool;
+    camType @3 :Int16;
+    camLimitSpeedLeftDist @4 :Int16;
+    camLimitSpeed @5 :Int16;
+    sectionLimitSpeed @6 :Int16;
+    sectionLeftDist @7 :Int16;
+    sectionAvgSpeed @8 :Int16;
+    sectionLeftTime @9 :Int16;
+    sectionAdjustSpeed @10 :Bool;
+    camSpeedFactor @11 :Float32;
 }

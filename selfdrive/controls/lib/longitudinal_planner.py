@@ -58,24 +58,23 @@ class LongitudinalPlanner:
 
     self.a_desired = init_a
     self.v_desired_filter = FirstOrderFilter(init_v, 2.0, DT_MDL)
+    self.v_model_error = 0.0
 
     self.v_desired_trajectory = np.zeros(CONTROL_N)
     self.a_desired_trajectory = np.zeros(CONTROL_N)
     self.j_desired_trajectory = np.zeros(CONTROL_N)
     self.solverExecutionTime = 0.0
 
-    self.use_cluster_speed = Params().get_bool('UseClusterSpeed')
-
   def read_param(self):
-    e2e = self.params.get_bool('EndToEndLong') and self.CP.openpilotLongitudinalControl
+    e2e = self.params.get_bool('ExperimentalMode') and self.CP.openpilotLongitudinalControl
     self.mpc.mode = 'blended' if e2e else 'acc'
 
-  def parse_model(self, model_msg):
+  def parse_model(self, model_msg, model_error):
     if (len(model_msg.position.x) == 33 and
        len(model_msg.velocity.x) == 33 and
        len(model_msg.acceleration.x) == 33):
-      x = np.interp(T_IDXS_MPC, T_IDXS, model_msg.position.x)
-      v = np.interp(T_IDXS_MPC, T_IDXS, model_msg.velocity.x)
+      x = np.interp(T_IDXS_MPC, T_IDXS, model_msg.position.x) - model_error * T_IDXS_MPC
+      v = np.interp(T_IDXS_MPC, T_IDXS, model_msg.velocity.x) - model_error
       a = np.interp(T_IDXS_MPC, T_IDXS, model_msg.acceleration.x)
       j = np.zeros(len(T_IDXS_MPC))
     else:
@@ -86,7 +85,7 @@ class LongitudinalPlanner:
     return x, v, a, j
 
   def update(self, sm, read=True):
-    if self.param_read_counter % 100 == 0 and read:
+    if self.param_read_counter % 50 == 0 and read:
       self.read_param()
     self.param_read_counter += 1
 
@@ -96,11 +95,10 @@ class LongitudinalPlanner:
     v_cruise = v_cruise_kph * CV.KPH_TO_MS
 
     # neokii
-    if not self.use_cluster_speed:
-      vCluRatio = sm['carState'].vCluRatio
-      if vCluRatio > 0.5:
-        v_cruise *= vCluRatio
-        v_cruise = int(v_cruise * CV.MS_TO_KPH + 0.25) * CV.KPH_TO_MS
+    vCluRatio = sm['carState'].vCluRatio
+    if vCluRatio > 0.5:
+      v_cruise *= vCluRatio
+      v_cruise = int(v_cruise * CV.MS_TO_KPH + 0.25) * CV.KPH_TO_MS
 
     long_control_off = sm['controlsState'].longControlState == LongCtrlState.off
     force_slow_decel = sm['controlsState'].forceDecel
@@ -121,6 +119,9 @@ class LongitudinalPlanner:
 
     # Prevent divergence, smooth in current v_ego
     self.v_desired_filter.x = max(0.0, self.v_desired_filter.update(v_ego))
+    # Compute model v_ego error
+    if len(sm['modelV2'].temporalPose.trans):
+      self.v_model_error = sm['modelV2'].temporalPose.trans[0] - v_ego
 
     if force_slow_decel:
       # if required so, force a smooth deceleration
@@ -133,7 +134,7 @@ class LongitudinalPlanner:
     self.mpc.set_weights(prev_accel_constraint)
     self.mpc.set_accel_limits(accel_limits_turns[0], accel_limits_turns[1])
     self.mpc.set_cur_state(self.v_desired_filter.x, self.a_desired)
-    x, v, a, j = self.parse_model(sm['modelV2'])
+    x, v, a, j = self.parse_model(sm['modelV2'], self.v_model_error)
     self.mpc.update(sm['carState'], sm['radarState'], v_cruise, x, v, a, j)
 
     self.v_desired_trajectory = np.interp(T_IDXS[:CONTROL_N], T_IDXS_MPC, self.mpc.v_solution)
@@ -141,8 +142,7 @@ class LongitudinalPlanner:
     self.j_desired_trajectory = np.interp(T_IDXS[:CONTROL_N], T_IDXS_MPC[:-1], self.mpc.j_solution)
 
     # TODO counter is only needed because radar is glitchy, remove once radar is gone
-    # TODO write fcw in e2e_long mode
-    self.fcw = self.mpc.mode == 'acc' and self.mpc.crash_cnt > 5
+    self.fcw = self.mpc.crash_cnt > 2 and not sm['carState'].standstill
     if self.fcw:
       cloudlog.info("FCW triggered")
 

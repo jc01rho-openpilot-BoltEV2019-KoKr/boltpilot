@@ -7,7 +7,6 @@ from common.realtime import DT_MDL
 TRAJECTORY_SIZE = 33
 
 ENABLE_ZORROBYTE = True
-ENABLE_INC_LANE_PROB = True
 
 
 class LanePlanner:
@@ -105,7 +104,7 @@ class LanePlanner:
     self.d_prob = l_prob + r_prob - l_prob * r_prob
 
     # neokii
-    if ENABLE_INC_LANE_PROB and self.d_prob > 0.65:
+    if self.d_prob > 0.65:
       self.d_prob = min(self.d_prob * 1.3, 1.0)
 
     lane_path_y = (l_prob * path_from_left_lane + r_prob * path_from_right_lane) / (l_prob + r_prob + 0.0001)

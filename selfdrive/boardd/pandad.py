@@ -7,7 +7,6 @@ import subprocess
 from typing import List, NoReturn
 from functools import cmp_to_key
 
-from common.spinner import Spinner
 from panda import DEFAULT_FW_FN, DEFAULT_H7_FW_FN, MCU_TYPE_H7, Panda, PandaDFU
 from common.basedir import BASEDIR
 from common.params import Params
@@ -114,9 +113,9 @@ def main() -> NoReturn:
           params.put_bool("PandaHeartbeatLost", True)
           cloudlog.event("heartbeat lost", deviceState=health, serial=panda.get_usb_serial())
 
-        #if first_run:
-        #  cloudlog.info(f"Resetting panda {panda.get_usb_serial()}")
-        #  panda.reset()
+        if first_run:
+          cloudlog.info(f"Resetting panda {panda.get_usb_serial()}")
+          panda.reset()
 
       # sort pandas to have deterministic order
       pandas.sort(key=cmp_to_key(panda_sort_cmp))

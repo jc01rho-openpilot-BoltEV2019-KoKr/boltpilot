@@ -30,11 +30,11 @@ private:
 };
 
 // container window for the NVG UI
-class NvgWindow : public CameraViewWidget {
+class AnnotatedCameraWidget : public CameraWidget {
   Q_OBJECT
 
 public:
-  explicit NvgWindow(VisionStreamType type, QWidget* parent = 0);
+  explicit AnnotatedCameraWidget(VisionStreamType type, QWidget* parent = 0);
   void updateState(const UIState &s);
 
 protected:
@@ -49,6 +49,10 @@ protected:
 
   double prev_draw_t = 0;
   FirstOrderFilter fps_filter;
+  std::unique_ptr<PubMaster> pm;
+
+  int skip_frame_count = 0;
+  bool wide_cam_requested = false;
 
   // neokii
   void drawIcon(QPainter &p, int x, int y, QPixmap &img, QBrush bg, float opacity);
@@ -103,7 +107,7 @@ protected:
 
 private:
   OnroadAlerts *alerts;
-  NvgWindow *nvg;
+  AnnotatedCameraWidget *nvg;
   QColor bg = bg_colors[STATUS_DISENGAGED];
   QWidget *map = nullptr;
   QHBoxLayout* split;

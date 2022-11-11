@@ -2,15 +2,14 @@ import numpy as np
 from common.realtime import sec_since_boot, DT_MDL
 from common.numpy_fast import interp
 from selfdrive.controls.lib.lane_planner import LanePlanner
-from selfdrive.ntune import ntune_common_get
+from selfdrive.controls.ntune import ntune_common_get
 from system.swaglog import cloudlog
 from selfdrive.controls.lib.lateral_mpc_lib.lat_mpc import LateralMpc
 from selfdrive.controls.lib.lateral_mpc_lib.lat_mpc import N as LAT_MPC_N
-from selfdrive.controls.lib.drive_helpers import CONTROL_N
-from selfdrive.controls.lib.desire_helper import DesireHelper, AUTO_LCA_START_TIME
+from selfdrive.controls.lib.drive_helpers import CONTROL_N, MIN_SPEED
+from selfdrive.controls.lib.desire_helper import DesireHelper
 import cereal.messaging as messaging
 from cereal import log
-from common.params import Params
 
 TRAJECTORY_SIZE = 33
 CAMERA_OFFSET = 0.04
@@ -26,14 +25,14 @@ LATERAL_JERK_COST = 0.05
 # speed lateral control is stable on all cars
 STEERING_RATE_COST = 800.0
 
-MIN_SPEED = 0.6
-
 
 class LateralPlanner:
   def __init__(self, CP):
-    self.use_lanelines = not Params().get_bool('EndToEndToggle')
-    self.LP = LanePlanner()
     self.DH = DesireHelper()
+    self.LP = LanePlanner()
+
+    from common.params import Params
+    self.use_lanelines = Params().get_bool('UseLanelines')
 
     # Vehicle model parameters used to calculate lateral movement of car
     self.factor1 = CP.wheelbase - CP.centerToFront
@@ -69,28 +68,23 @@ class LateralPlanner:
       self.plan_yaw_rate = np.array(md.orientationRate.z)
 
     # Lane change logic
-    lane_change_prob = self.LP.l_lane_change_prob + self.LP.r_lane_change_prob
+    desire_state = md.meta.desireState
+    if len(desire_state):
+      self.l_lane_change_prob = desire_state[log.LateralPlan.Desire.laneChangeLeft]
+      self.r_lane_change_prob = desire_state[log.LateralPlan.Desire.laneChangeRight]
+    lane_change_prob = self.l_lane_change_prob + self.r_lane_change_prob
     self.DH.update(sm['carState'], sm['carControl'].latActive, lane_change_prob)
 
-    # Turn off lanes during lane change
-    if self.DH.desire == log.LateralPlan.Desire.laneChangeRight or self.DH.desire == log.LateralPlan.Desire.laneChangeLeft:
-      self.LP.lll_prob *= self.DH.lane_change_ll_prob
-      self.LP.rll_prob *= self.DH.lane_change_ll_prob
-
-    # Calculate final driving path and set MPC costs
     if self.use_lanelines:
       d_path_xyz = self.LP.get_d_path(self.v_ego, self.t_idxs, self.path_xyz)
-      d_path_xyz[:, 1] += ntune_common_get('pathOffset')
-      self.lat_mpc.set_weights(PATH_COST, LATERAL_MOTION_COST,
-                               LATERAL_ACCEL_COST, LATERAL_JERK_COST,
-                               STEERING_RATE_COST)
     else:
       d_path_xyz = self.path_xyz
-      d_path_xyz[:, 1] += ntune_common_get('pathOffset')
 
-      self.lat_mpc.set_weights(PATH_COST, LATERAL_MOTION_COST,
-                               LATERAL_ACCEL_COST, LATERAL_JERK_COST,
-                               STEERING_RATE_COST)
+    d_path_xyz[:, 1] += ntune_common_get('pathOffset')
+
+    self.lat_mpc.set_weights(PATH_COST, LATERAL_MOTION_COST,
+                             LATERAL_ACCEL_COST, LATERAL_JERK_COST,
+                             STEERING_RATE_COST)
 
     y_pts = np.interp(self.v_ego * self.t_idxs[:LAT_MPC_N + 1], np.linalg.norm(d_path_xyz, axis=1), d_path_xyz[:, 1])
     heading_pts = np.interp(self.v_ego * self.t_idxs[:LAT_MPC_N + 1], np.linalg.norm(self.path_xyz, axis=1), self.plan_yaw)
@@ -135,16 +129,11 @@ class LateralPlanner:
 
     lateralPlan = plan_send.lateralPlan
     lateralPlan.modelMonoTime = sm.logMonoTime['modelV2']
-    lateralPlan.laneWidth = float(self.LP.lane_width)
     lateralPlan.dPathPoints = self.y_pts.tolist()
     lateralPlan.psis = self.lat_mpc.x_sol[0:CONTROL_N, 2].tolist()
 
     lateralPlan.curvatures = (self.lat_mpc.x_sol[0:CONTROL_N, 3]/self.v_ego).tolist()
     lateralPlan.curvatureRates = [float(x/self.v_ego) for x in self.lat_mpc.u_sol[0:CONTROL_N - 1]] + [0.0]
-
-    lateralPlan.lProb = float(self.LP.lll_prob)
-    lateralPlan.rProb = float(self.LP.rll_prob)
-    lateralPlan.dProb = float(self.LP.d_prob)
 
     lateralPlan.mpcSolutionValid = bool(plan_solution_valid)
     lateralPlan.solverExecutionTime = self.lat_mpc.solve_time
@@ -153,8 +142,5 @@ class LateralPlanner:
     lateralPlan.useLaneLines = self.use_lanelines
     lateralPlan.laneChangeState = self.DH.lane_change_state
     lateralPlan.laneChangeDirection = self.DH.lane_change_direction
-
-    lateralPlan.autoLaneChangeEnabled = self.DH.auto_lane_change_enabled
-    lateralPlan.autoLaneChangeTimer = int(AUTO_LCA_START_TIME) - int(self.DH.auto_lane_change_timer)
 
     pm.send('lateralPlan', plan_send)

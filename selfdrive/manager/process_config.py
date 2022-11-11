@@ -21,12 +21,12 @@ procs = [
   # due to qualcomm kernel bugs SIGKILLing camerad sometimes causes page table corruption
   NativeProcess("camerad", "system/camerad", ["./camerad"], unkillable=True, callback=driverview),
   NativeProcess("clocksd", "system/clocksd", ["./clocksd"]),
-  NativeProcess("logcatd", "system/logcatd", ["./logcatd"]),
+  #NativeProcess("logcatd", "system/logcatd", ["./logcatd"]),
   NativeProcess("proclogd", "system/proclogd", ["./proclogd"]),
   #PythonProcess("logmessaged", "system.logmessaged", offroad=True),
   PythonProcess("timezoned", "system.timezoned", enabled=not PC, offroad=True),
 
-  #DaemonProcess("manage_athenad", "selfdrive.athena.manage_athenad", "AthenadPid"),
+  DaemonProcess("manage_athenad", "selfdrive.athena.manage_athenad", "AthenadPid"),
   NativeProcess("dmonitoringmodeld", "selfdrive/modeld", ["./dmonitoringmodeld"], enabled=(not PC or WEBCAM), callback=driverview),
   NativeProcess("encoderd", "selfdrive/loggerd", ["./encoderd"]),
   NativeProcess("loggerd", "selfdrive/loggerd", ["./loggerd"], onroad=False, callback=logging),
@@ -52,13 +52,16 @@ procs = [
   PythonProcess("radard", "selfdrive.controls.radard"),
   PythonProcess("thermald", "selfdrive.thermald.thermald", offroad=True),
   #PythonProcess("tombstoned", "selfdrive.tombstoned", enabled=not PC, offroad=True),
-  #PythonProcess("updated", "selfdrive.updated", enabled=not PC, onroad=False, offroad=True),
+  PythonProcess("updated", "selfdrive.updated", enabled=not PC, onroad=False, offroad=True),
   #PythonProcess("uploader", "selfdrive.loggerd.uploader", offroad=True),
   #PythonProcess("statsd", "selfdrive.statsd", offroad=True),
 
   # debug procs
   NativeProcess("bridge", "cereal/messaging", ["./bridge"], onroad=False, callback=notcar),
   PythonProcess("webjoystick", "tools.joystick.web", onroad=False, callback=notcar),
+
+  # neokii
+  PythonProcess("navi_controller", "selfdrive.controls.neokii.navi_controller", offroad=True, enabled=TICI),
 ]
 
 managed_processes = {p.name: p for p in procs}

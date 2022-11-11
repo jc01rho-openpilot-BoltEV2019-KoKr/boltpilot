@@ -20,7 +20,7 @@ void Sidebar::drawMetric(QPainter &p, const QPair<QString, QString> &label, QCol
   p.drawRoundedRect(rect, 20, 20);
 
   p.setPen(QColor(0xff, 0xff, 0xff));
-  configFont(p, "Inter", 40, "SemiBold");
+  configFont(p, "Inter", 35, "SemiBold");
 
   QRect label_rect = getTextRect(p, Qt::AlignCenter, label.first);
   label_rect.setWidth(218);
@@ -86,18 +86,17 @@ void Sidebar::updateState(const UIState &s) {
   setProperty("netType", network_type[deviceState.getNetworkType()]);
   int strength = (int)deviceState.getNetworkStrength();
   setProperty("netStrength", strength > 0 ? strength + 1 : 0);
+  
   setProperty("wifiAddr", deviceState.getWifiIpAddress().cStr());
 
-  int freeSpacePercent = deviceState.getFreeSpacePercent();
-  QColor freeSpacePercentColor = good_color;
-  if(freeSpacePercent < 30)
-    freeSpacePercentColor = warning_color;
-  else if(freeSpacePercent < 10)
-    freeSpacePercentColor = danger_color;
-
-  QString freeSpacePercentDesc;
-  freeSpacePercentDesc.sprintf("%d%%", freeSpacePercent);
-  setProperty("storageStatus", QVariant::fromValue(ItemStatus{{tr("FREE"), freeSpacePercentDesc}, freeSpacePercentColor}));
+  ItemStatus connectStatus;
+  auto last_ping = deviceState.getLastAthenaPingTime();
+  if (last_ping == 0) {
+    connectStatus = ItemStatus{{tr("CONNECT"), tr("OFFLINE")}, warning_color};
+  } else {
+    connectStatus = nanos_since_boot() - last_ping < 80e9 ? ItemStatus{{tr("CONNECT"), tr("ONLINE")}, good_color} : ItemStatus{{tr("CONNECT"), tr("ERROR")}, danger_color};
+  }
+  setProperty("connectStatus", QVariant::fromValue(connectStatus));
 
   ItemStatus tempStatus = {{tr("TEMP"), tr("HIGH")}, danger_color};
   auto ts = deviceState.getThermalStatus();
@@ -140,19 +139,19 @@ void Sidebar::paintEvent(QPaintEvent *event) {
     x += 37;
   }
 
-  configFont(p, "Inter", 30, "Regular");
+  configFont(p, "Inter", 35, "Regular");
   p.setPen(QColor(0xff, 0xff, 0xff));
-
-  const QRect r = QRect(0, 247, event->rect().width(), 50);
+  const QRect r = QRect(50, 247, 100, 50);
+  //p.drawText(r, Qt::AlignCenter, net_type);
 
   if(net_type == network_type[cereal::DeviceState::NetworkType::WIFI])
     p.drawText(r, Qt::AlignCenter, wifi_addr);
   else
     p.drawText(r, Qt::AlignCenter, net_type);
+    
 
   // metrics
-  configFont(p, "Inter", 40, "Regular");
   drawMetric(p, temp_status.first, temp_status.second, 338);
   drawMetric(p, panda_status.first, panda_status.second, 496);
-  drawMetric(p, storage_status.first, storage_status.second, 654);
+  drawMetric(p, connect_status.first, connect_status.second, 654);
 }

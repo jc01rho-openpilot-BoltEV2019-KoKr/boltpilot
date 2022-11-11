@@ -15,6 +15,7 @@ def plannerd_thread(sm=None, pm=None):
   params = Params()
   CP = car.CarParams.from_bytes(params.get("CarParams", block=True))
   cloudlog.info("plannerd got CarParams: %s", CP.carName)
+
   longitudinal_planner = LongitudinalPlanner(CP)
   lateral_planner = LateralPlanner(CP)
 

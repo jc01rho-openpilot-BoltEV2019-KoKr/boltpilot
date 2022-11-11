@@ -66,6 +66,7 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     lowBattery @48;
     vehicleModelInvalid @50;
     accFaulted @51;
+    accFaultedTemp @115;
     sensorDataInvalid @52;
     commIssue @53;
     commIssueAvgFreq @109;
@@ -115,10 +116,12 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     controlsdLagging @112;
     resumeBlocked @113;
 
-    turningIndicatorOn @115;
-    autoLaneChange @116;
-    slowingDownSpeed @117;
-    slowingDownSpeedSound @118;
+    slowingDownSpeed @116;
+    slowingDownSpeedSound @117;
+    cruiseOn @118;
+    cruiseOff @119;
+    noTargetAcc @120;
+    autoLaneChange @121;
 
     radarCanErrorDEPRECATED @15;
     communityFeatureDisallowedDEPRECATED @62;
@@ -218,12 +221,10 @@ struct CarState {
   fuelGauge @41 :Float32; # battery or fuel tank level from 0.0 to 1.0
   charging @43 :Bool;
 
-
-  cruiseGap @45 : Int32;
-  autoHold @46 : Int32;
-  tpms @47 : Tpms;
-  vCluRatio @48 :Float32;
-  aBasis @49 :Float32;
+  # neokii
+  vCluRatio @45 :Float32;
+  autoHold @46 :Int32;
+  tpms @47 :Tpms;
 
   struct Tpms {
     fl @0 :Float32;
@@ -248,7 +249,7 @@ struct CarState {
     speedOffset @3 :Float32;
     standstill @4 :Bool;
     nonAdaptive @5 :Bool;
-    enabledAcc @7 :Bool;
+    gapAdjust @7 :Int8;
   }
 
   enum GearShifter {
@@ -346,15 +347,16 @@ struct CarControl {
   cruiseControl @4 :CruiseControl;
   hudControl @5 :HUDControl;
 
-  sccSmoother @15 :SccSmoother;
+  applyMaxSpeed @15 :Float32;
+  cruiseMaxSpeed @16 :Float32;
+  autoTrGap @17 :UInt32;
+  steerRatio @18 :Float32;
+  steerActuatorDelay @19 :Float32;
+  sccBus @20 :UInt8;
 
-  struct SccSmoother {
-    longControl @0:Bool;
-    applyMaxSpeed @1 :Float32;
-    cruiseMaxSpeed @2 :Float32;
-    logMessage @3 :Text;
-    autoTrGap @4 :UInt32;
-  }
+  applyAccel @21 :Float32;
+  aReqValue @22 :Float32;
+  debugText @23 :Text;
 
   struct Actuators {
     # range from 0.0 - 1.0
@@ -423,8 +425,10 @@ struct CarControl {
       prompt @6;
       promptRepeat @7;
       promptDistracted @8;
-      
+
       slowingDownSpeed @9;
+      cruiseOn @10;
+      cruiseOff @11;
     }
   }
 
@@ -448,14 +452,12 @@ struct CarParams {
   enableGasInterceptor @2 :Bool;
   pcmCruise @3 :Bool;        # is openpilot's state tied to the PCM's cruise state?
   enableDsu @5 :Bool;        # driving support unit
-  enableApgs @6 :Bool;       # advanced parking guidance system
   enableBsm @56 :Bool;       # blind spot monitoring
   flags @64 :UInt32;         # flags for car specific quirks
   experimentalLongitudinalAvailable @71 :Bool;
 
   minEnableSpeed @7 :Float32;
   minSteerSpeed @8 :Float32;
-  maxSteeringAngleDeg @54 :Float32;
   safetyConfigs @62 :List(SafetyConfig);
   alternativeExperience @65 :Int16;      # panda flag for features like no disengage on gas
 
@@ -489,7 +491,6 @@ struct CarParams {
 
   vEgoStopping @29 :Float32; # Speed at which the car goes into stopping state
   vEgoStarting @59 :Float32; # Speed at which the car goes into starting state
-  directAccelControl @30 :Bool; # Does the car have direct accel control or just gas/brake
   stoppingControl @31 :Bool; # Does the car allow full control even at lows speeds when stopping
   steerControlType @34 :SteerControlType;
   radarOffCan @35 :Bool; # True when radar objects aren't visible on CAN
@@ -519,16 +520,6 @@ struct CarParams {
     safetyParamDEPRECATED @1 :Int16;
     safetyParam2DEPRECATED @2 :UInt32;
   }
-  
-  mdpsBus @72: Int8;
-  sasBus @73: Int8;
-  sccBus @74: Int8;
-  enableAutoHold @75 :Bool;
-  hasScc13 @76 :Bool;
-  hasScc14 @77 :Bool;
-  hasEms @78 :Bool;
-  hasLfaHda @79 :Bool;
-  disableLateralLiveTuning @80 :Bool;
 
   struct LateralParams {
     torqueBP @0 :List(Int32);
@@ -665,6 +656,7 @@ struct CarParams {
     electricBrakeBooster @15;
     shiftByWire @16;
     adas @19;
+    cornerRadar @21;
 
     # Toyota only
     dsu @6;
@@ -695,6 +687,7 @@ struct CarParams {
   }
 
   enableCameraDEPRECATED @4 :Bool;
+  enableApgsDEPRECATED @6 :Bool;
   steerRateCostDEPRECATED @33 :Float32;
   isPandaBlackDEPRECATED @39 :Bool;
   hasStockCameraDEPRECATED @57 :Bool;
@@ -710,4 +703,14 @@ struct CarParams {
   gasMaxVDEPRECATED @14 :List(Float32);
   brakeMaxBPDEPRECATED @15 :List(Float32);
   brakeMaxVDEPRECATED @16 :List(Float32);
+  directAccelControlDEPRECATED @30 :Bool;
+  maxSteeringAngleDegDEPRECATED @54 :Float32;
+
+
+  sccBus @72: Int8;
+  hasAutoHold @73 :Bool;
+  hasScc13 @74 :Bool;
+  hasScc14 @75 :Bool;
+  hasEms @76 :Bool;
+  hasLfaHda @77 :Bool;
 }
