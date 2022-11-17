@@ -1,0 +1,42 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Pull (Fast-Forward) upstream changes
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the 075-kegman-lqr branch
+on:
+  schedule:
+    - cron: '41 */12 * * *'
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  pull_from_neokii:
+    name: Pull from Neokii
+    # The type of runner that the job will run on
+    runs-on: ubuntu-20.04
+    if: github.repository == 'jc01rho-openpilot-BoltEV2019-KoKr/boltpilot'
+    outputs:
+      has_new_commits: ${{ steps.sync.outputs.has_new_commits }}
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - uses: actions/checkout@v3 #checkout origin
+        with:
+          fetch-depth: 0
+          ref: hkg_dev
+
+    # Step 2: run this sync action - specify the upstream repo, upstream branch to sync with, and target sync branch
+      - name: Pull (Fast-Forward) upstream changes
+        id: sync
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.2
+        with:
+          target_sync_branch: hkg_master
+          # REQUIRED 'target_repo_token' exactly like this!
+          target_repo_token: ${{ secrets.REPO_SECRET }}
+          upstream_sync_branch: hkg_master
+          upstream_sync_repo: neokii/npilot
+  make_pr_call:
+    needs: pull_from_neokii # ${{needs.job1.outputs.output1}}
+    uses: ./.github/workflows/pr-from-hkg-dev.yml
+

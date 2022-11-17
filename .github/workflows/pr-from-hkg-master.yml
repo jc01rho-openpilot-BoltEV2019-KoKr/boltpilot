@@ -1,0 +1,83 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CreatePullRequest from hkg_dev
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the 075-kegman-lqr branch
+on:
+  push:
+    branches:
+    - hkg_dev  # Support wildcard matching
+  workflow_call:
+
+env:
+  ## Sets environment variable
+  GITHUB_TOKEN:  ${{secrets.GITHUB_TOKEN}}
+  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+  PRNUMBER: -1
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  create_pr_and_automerge:
+    name: CreatePullRequest from hkg_dev
+    # The type of runner that the job will run on
+    runs-on: ubuntu-20.04
+    if: github.repository == 'jc01rho-openpilot-BoltEV2019-KoKr/boltpilot'
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+
+      - uses: actions/checkout@v3 #checkout origin
+        with:
+          fetch-depth: 0
+          ref: hkg_dev
+
+
+      # Step 4: Print a helpful timestamp for your records (not required, just nice)
+      - name: pull-request
+        uses: repo-sync/pull-request@v2
+        id: open-pr
+        with:
+          source_branch: "hkg_master"
+          destination_branch: "feature/0817-master"
+          github_token:  ${{ secrets.REPO_SECRET }}
+#          pr_assignee: "jc01rho"
+          pr_label: "automerge"
+
+      - name: Change env for  PRNUMBER
+        run: echo "::set-env name=PRNUMBER::${{steps.open-pr.outputs.pr_number}}"
+
+      - name: Check pr_number presence
+        id: checksecrets
+        shell: bash
+        run: |
+          if [ "$MULTI_LINE_ARG" == "" ]; then
+            echo "false ongoing"; echo ::set-output name=prnumberpresent::false
+          else
+            echo "true ongoing";  echo ::set-output name=prnumberpresent::true
+          fi
+          sleep 20s;
+        env:
+          MULTI_LINE_ARG: ${{ env.PRNUMBER }}
+
+
+      - uses: jitterbit/await-check-suites@v1
+        if: ${{ env.PRNUMBER != '' &&  steps.checksecrets.outputs.prnumberpresent == 'true' }}
+
+      - id: automerge
+        if: ${{ env.PRNUMBER != '' &&  steps.checksecrets.outputs.prnumberpresent == 'true' }}
+        name: automerge
+        uses: "pascalgn/automerge-action@v0.15.3"
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+
+
+
+
+#      - name: set remote and merge
+#        run:  sh -c ' git remote add neokii https://github.com/neokii/op4.git &&  git fetch --progress --recurse-submodules=no neokii +refs/heads/hkg_dev:refs/remotes/neokii/hkg_dev && git merge -X theirs --no-commit neokii/hkg_dev '
+
+
+
+
