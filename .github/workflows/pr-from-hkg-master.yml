@@ -7,7 +7,7 @@ name: CreatePullRequest from hkg_dev
 on:
   push:
     branches:
-    - hkg_dev  # Support wildcard matching
+    - hkg_master  # Support wildcard matching
   workflow_call:
 
 env:
@@ -20,7 +20,7 @@ env:
 jobs:
   # This workflow contains a single job called "build"
   create_pr_and_automerge:
-    name: CreatePullRequest from hkg_dev
+    name: CreatePullRequest from hkg_master
     # The type of runner that the job will run on
     runs-on: ubuntu-20.04
     if: github.repository == 'jc01rho-openpilot-BoltEV2019-KoKr/boltpilot'

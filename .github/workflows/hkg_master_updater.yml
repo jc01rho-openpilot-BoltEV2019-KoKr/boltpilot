@@ -13,7 +13,7 @@ on:
 jobs:
   # This workflow contains a single job called "build"
   pull_from_neokii:
-    name: Pull from Neokii
+    name: Pull from Neokii-master
     # The type of runner that the job will run on
     runs-on: ubuntu-20.04
     if: github.repository == 'jc01rho-openpilot-BoltEV2019-KoKr/boltpilot'
@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v3 #checkout origin
         with:
           fetch-depth: 0
-          ref: hkg_dev
+          ref: hkg_master
 
     # Step 2: run this sync action - specify the upstream repo, upstream branch to sync with, and target sync branch
       - name: Pull (Fast-Forward) upstream changes
@@ -38,5 +38,5 @@ jobs:
           upstream_sync_repo: neokii/npilot
   make_pr_call:
     needs: pull_from_neokii # ${{needs.job1.outputs.output1}}
-    uses: ./.github/workflows/pr-from-hkg-dev.yml
+    uses: ./.github/workflows/pr-from-hkg-master.yml
 

@@ -13,7 +13,7 @@ on:
 jobs:
   # This workflow contains a single job called "build"
   pull_from_neokii:
-    name: Pull from Neokii
+    name: Pull from Neokii-dev
     # The type of runner that the job will run on
     runs-on: ubuntu-20.04
     if: github.repository == 'jc01rho-openpilot-BoltEV2019-KoKr/boltpilot'
