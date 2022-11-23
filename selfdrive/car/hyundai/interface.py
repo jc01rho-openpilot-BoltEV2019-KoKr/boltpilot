@@ -10,6 +10,7 @@ from selfdrive.car import STD_CARGO_KG, create_button_event, scale_rot_inertia, 
 from selfdrive.car.interfaces import CarInterfaceBase
 from selfdrive.car.disable_ecu import disable_ecu
 from selfdrive.controls.neokii.cruise_state_manager import is_radar_disabler
+from common.params import Params
 
 Ecu = car.CarParams.Ecu
 ButtonType = car.CarState.ButtonEvent.Type
@@ -167,7 +168,7 @@ class CarInterface(CarInterfaceBase):
       tire_stiffness_factor = 0.5
       if candidate == CAR.KIA_OPTIMA_G4:
         ret.minSteerSpeed = 32 * CV.MPH_TO_MS
-    elif candidate == CAR.KIA_STINGER:
+    elif candidate in (CAR.KIA_STINGER, CAR.KIA_STINGER_2022):
       ret.mass = 1825. + STD_CARGO_KG
       ret.wheelbase = 2.78
       ret.steerRatio = 14.4 * 1.15   # 15% higher at the center seems reasonable
@@ -230,7 +231,7 @@ class CarInterface(CarInterfaceBase):
     if candidate in CANFD_CAR:
       ret.longitudinalTuning.kpV = [0.1]
       ret.longitudinalTuning.kiV = [0.0]
-      ret.experimentalLongitudinalAvailable = bool(ret.flags & HyundaiFlags.CANFD_HDA2)
+      ret.experimentalLongitudinalAvailable = candidate in (HYBRID_CAR | EV_CAR) and candidate not in CANFD_RADAR_SCC_CAR
     else:
       ret.longitudinalTuning.kpBP = [0., 5. * CV.KPH_TO_MS, 10. * CV.KPH_TO_MS, 30. * CV.KPH_TO_MS, 130. * CV.KPH_TO_MS]
       ret.longitudinalTuning.kpV = [1.2, 1.05, 1.0, 0.92, 0.55]
@@ -281,7 +282,6 @@ class CarInterface(CarInterfaceBase):
       else:
         ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.hyundai, 0)]
 
-      from common.params import Params
       ret.sccBus = 2 if (candidate in CAMERA_SCC_CAR or Params().get_bool('SccOnBus2')) else 0
       ret.hasAutoHold = 1151 in fingerprint[0]
       ret.hasLfaHda = 1157 in fingerprint[0]
@@ -323,7 +323,7 @@ class CarInterface(CarInterfaceBase):
 
   @staticmethod
   def init(CP, logcan, sendcan):
-    if is_radar_disabler(CP):
+    if is_radar_disabler(CP) and not (CP.flags & HyundaiFlags.CANFD_CAMERA_SCC.value):
       addr, bus = 0x7d0, 0
       if CP.flags & HyundaiFlags.CANFD_HDA2.value:
         addr, bus = 0x730, 5

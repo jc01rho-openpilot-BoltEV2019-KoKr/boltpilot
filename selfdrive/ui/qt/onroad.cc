@@ -246,6 +246,8 @@ void OnroadAlerts::paintEvent(QPaintEvent *event) {
 AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* parent) : last_update_params(0), fps_filter(UI_FREQ, 3, 1. / UI_FREQ), CameraWidget("camerad", type, true, parent) {
   pm = std::make_unique<PubMaster, const std::initializer_list<const char *>>({"uiDebug"});
 
+  experimental_img = loadPixmap("../assets/img_experimental.svg", {img_size - 5, img_size - 5});
+
   // neokii
   ic_brake = QPixmap("../assets/images/img_brake_disc.png").scaled(img_size, img_size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
   ic_autohold_warning = QPixmap("../assets/images/img_autohold_warning.png").scaled(img_size, img_size, Qt::KeepAspectRatio, Qt::SmoothTransformation);
@@ -294,6 +296,8 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s) {
   painter.save();
 
   const UIScene &scene = s->scene;
+  SubMaster &sm = *(s->sm);
+
   // lanelines
   for (int i = 0; i < std::size(scene.lane_line_vertices); ++i) {
     painter.setBrush(QColor::fromRgbF(1.0, 1.0, 1.0, std::clamp<float>(scene.lane_line_probs[i], 0.0, 0.7)));
@@ -309,8 +313,8 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s) {
   // paint path
   QLinearGradient bg(0, height(), 0, height() / 4);
   float start_hue, end_hue;
-  if (scene.experimental_mode) {
-    const auto &acceleration = (*s->sm)["modelV2"].getModelV2().getAcceleration();
+  if (sm["controlsState"].getControlsState().getExperimentalMode()) {
+    const auto &acceleration = sm["modelV2"].getModelV2().getAcceleration();
     float acceleration_future = 0;
     if (acceleration.getZ().size() > 16) {
       acceleration_future = acceleration.getX()[16];  // 2.5 seconds
@@ -406,7 +410,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
     } else if (v_ego > 15) {
       wide_cam_requested = false;
     }
-    wide_cam_requested = wide_cam_requested && s->scene.experimental_mode;
+    wide_cam_requested = wide_cam_requested && sm["controlsState"].getControlsState().getExperimentalMode();
     // TODO: also detect when ecam vision stream isn't available
     // for replay of old routes, never go to widecam
     wide_cam_requested = wide_cam_requested && s->scene.calibration_wide_valid;

@@ -72,7 +72,6 @@ class CarController:
     self.e2e_long = params.get_bool('ExperimentalMode')
 
   def update(self, CC, CS):
-    CC.cruiseControl.cancel = False # mad mode
     actuators = CC.actuators
     hud_control = CC.hudControl
 
@@ -103,7 +102,7 @@ class CarController:
     # *** common hyundai stuff ***
 
     # tester present - w/ no response (keeps relevant ECU disabled)
-    if self.frame % 100 == 0 and self.CP.openpilotLongitudinalControl and self.CP.sccBus == 0:
+    if self.frame % 100 == 0 and not (self.CP.flags & HyundaiFlags.CANFD_CAMERA_SCC.value) and self.CP.openpilotLongitudinalControl and self.CP.sccBus == 0:
       addr, bus = 0x7d0, 0
       if self.CP.flags & HyundaiFlags.CANFD_HDA2.value:
         addr, bus = 0x730, 5
@@ -140,10 +139,11 @@ class CarController:
         can_sends.append(hyundaicanfd.create_lfahda_cluster(self.packer, self.CP, CC.enabled))
 
       if self.CP.openpilotLongitudinalControl:
-        can_sends.extend(hyundaicanfd.create_adrv_messages(self.packer, self.frame))
+        if hda2:
+          can_sends.extend(hyundaicanfd.create_adrv_messages(self.packer, self.frame))
         if self.frame % 2 == 0:
           can_sends.append(hyundaicanfd.create_acc_control(self.packer, self.CP, CC.enabled, self.accel_last, accel, stopping, CC.cruiseControl.override,
-                                                           set_speed_in_units))
+                                                           set_speed_in_units, CS))
           self.accel_last = accel
       else:
         # button presses
@@ -193,7 +193,7 @@ class CarController:
         # TODO: unclear if this is needed
         jerk = 3.0 if actuators.longControlState == LongCtrlState.pid else 1.0
 
-        if CC.longActive and CS.out.cruiseState.enabled:
+        if CC.longActive:
           start_boost = interp(CS.out.vEgo, [CREEP_SPEED, 2 * CREEP_SPEED], [0.2 if self.e2e_long else 0.4, 0.0])
           is_accelerating = interp(accel, [0.0, 0.2], [0.0, 1.0])
           boost = start_boost * is_accelerating
@@ -212,8 +212,8 @@ class CarController:
       if self.frame % 20 == 0 and self.CP.openpilotLongitudinalControl:
         if self.CP.sccBus == 0:
           can_sends.extend(hyundaican.create_acc_opt(self.packer))
-        else:
-          can_sends.extend(hyundaiexcan.create_acc_opt(self.packer))
+        elif CS.scc13 is not None:
+          can_sends.append(hyundaiexcan.create_acc_opt(self.packer, CS))
 
       # 2 Hz front radar options
       if self.frame % 50 == 0 and self.CP.openpilotLongitudinalControl and self.CP.sccBus == 0:

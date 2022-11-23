@@ -61,32 +61,28 @@ def create_acc_commands(packer, enabled, accel, upper_jerk, idx, lead_visible,
     #  obj_gap = 1 if d < 25 else 2 if d < 40 else 3 if d < 60 else 4 if d < 80 else 5
 
     values = CS.scc14
-    values["ComfortBandUpper"] = 0.0
-    values["ComfortBandLower"] = 0.0
-    values["JerkUpperLimit"] = upper_jerk
-    values["JerkLowerLimit"] = 5.0
-    values["ACCMode"] = 2 if cruise_enabled and long_override else 1 if cruise_enabled else 0
-    values["ObjGap"] = obj_gap
+
+    if enabled:
+      values["ACCMode"] = 2 if CS.out.gasPressed and (accel > -0.2) else 1
+      values["ObjGap"] = obj_gap
+      if stopping:
+        values["JerkUpperLimit"] = 0.5
+        values["JerkLowerLimit"] = 10.
+        values["ComfortBandUpper"] = 0.
+        values["ComfortBandLower"] = 0.
+        if CS.out.vEgo > 0.27:
+          values["ComfortBandUpper"] = 2.
+          values["ComfortBandLower"] = 0.
+      else:
+        values["JerkUpperLimit"] = 50.
+        values["JerkLowerLimit"] = 50.
+        values["ComfortBandUpper"] = 50.
+        values["ComfortBandLower"] = 50.
 
     commands.append(packer.make_can_msg("SCC14", 0, values))
 
   return commands
 
-def create_acc_opt(packer):
-  commands = []
-
-  scc13_values = {
-    "SCCDrvModeRValue": 2,
-    "SCC_Equip": 1,
-    "Lead_Veh_Dep_Alert_USM": 2,
-  }
-  commands.append(packer.make_can_msg("SCC13", 0, scc13_values))
-
-  #fca12_values = {
-  #  "FCA_DrvSetState": 2,
-  #  "FCA_USM": 1, # AEB disabled
-  #}
-  #commands.append(packer.make_can_msg("FCA12", 0, fca12_values))
-
-  return commands
+def create_acc_opt(packer, CS):
+  return packer.make_can_msg("SCC13", 0, CS.scc13)
 
