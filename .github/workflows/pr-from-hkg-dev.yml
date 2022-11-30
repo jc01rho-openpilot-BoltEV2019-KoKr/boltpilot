@@ -39,7 +39,7 @@ jobs:
         id: open-pr
         with:
           source_branch: "hkg_dev"
-          destination_branch: "feature/0817"
+          destination_branch: "feature/091"
           github_token:  ${{ secrets.REPO_SECRET }}
 #          pr_assignee: "jc01rho"
           pr_label: "automerge"
