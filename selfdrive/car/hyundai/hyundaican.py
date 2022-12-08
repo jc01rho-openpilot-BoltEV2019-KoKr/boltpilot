@@ -2,6 +2,7 @@ import crcmod
 from selfdrive.car.hyundai.values import CAR, CHECKSUM
 from common.conversions import Conversions as CV
 from selfdrive.car.hyundai.values import FEATURES
+from selfdrive.controls.neokii.navi_controller import SpeedLimiter
 
 hyundai_checksum = crcmod.mkCrcFun(0x11D, initCrc=0xFD, rev=False, xorOut=0xdf)
 
@@ -96,7 +97,7 @@ def create_lfahda_mfc(packer, enabled, hda_set_speed=0):
   }
   return packer.make_can_msg("LFAHDA_MFC", 0, values)
 
-def create_acc_commands(packer, enabled, accel, upper_jerk, idx, lead_visible, set_speed, stopping, long_override, CS):
+def create_acc_commands(packer, enabled, accel, upper_jerk, idx, lead_visible, set_speed, stopping, long_override, CS, stock_cam):
   commands = []
 
   cruise_enabled = enabled and CS.out.cruiseState.enabled
@@ -112,6 +113,12 @@ def create_acc_commands(packer, enabled, accel, upper_jerk, idx, lead_visible, s
     "ACC_ObjRelSpd": 0,
     "ACC_ObjDist": 1, # close lead makes controls tighter
     }
+
+  if not stock_cam:
+    active_cam = SpeedLimiter.instance().get_cam_active()
+    scc11_values["Navi_SCC_Camera_Act"] = 2 if active_cam else 0
+    scc11_values["Navi_SCC_Camera_Status"] = 2 if active_cam else 0
+
   commands.append(packer.make_can_msg("SCC11", 0, scc11_values))
 
   scc12_values = {

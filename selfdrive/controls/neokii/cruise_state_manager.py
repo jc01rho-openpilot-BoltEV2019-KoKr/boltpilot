@@ -3,7 +3,7 @@ from cereal import car
 from common.numpy_fast import clip
 from selfdrive.car import create_button_event
 from common.conversions import Conversions as CV
-from common.params import Params
+from common.params import Params, put_nonblocking
 from selfdrive.car.hyundai.values import CANFD_CAR
 from selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX, V_CRUISE_ENABLE_MIN
 
@@ -35,7 +35,10 @@ class CruiseStateManager:
     self.available = False
     self.enabled = False
     self.speed = V_CRUISE_ENABLE_MIN * CV.KPH_TO_MS
-    self.gapAdjust = 4
+    gap = Params().get('SccGapAdjust')
+    self.gapAdjust = int(gap) if gap is not None else 4
+    if self.gapAdjust < 1 or self.gapAdjust > 4:
+      self.gapAdjust = 4
 
     self.prev_speed = 0
     self.prev_main_buttons = 0
@@ -163,6 +166,7 @@ class CruiseStateManager:
       self.gapAdjust -= 1
       if self.gapAdjust < 1:
         self.gapAdjust = 4
+      put_nonblocking("SccGapAdjust", str(self.gapAdjust))
 
     if btn == ButtonType.cancel:
       self.enabled = False

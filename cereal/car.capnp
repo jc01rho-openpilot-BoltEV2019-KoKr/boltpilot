@@ -34,7 +34,7 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     buttonCancel @11;
     buttonEnable @12;
     pedalPressed @13;  # exits active state
-    pedalPressedPreEnable @73;  # added during pre-enable state for either pedal
+    preEnableStandstill @73;  # added during pre-enable state with brake
     gasPressedOverride @108;  # added when user is pressing gas with no disengage on gas
     steerOverride @114;
     cruiseDisabled @14;
@@ -46,7 +46,6 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     controlsMismatch @22;
     pcmEnable @23;
     pcmDisable @24;
-    noTarget @25;
     radarFault @26;
     brakeHold @28;
     parkBrake @29;
@@ -120,8 +119,6 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     slowingDownSpeedSound @117;
     cruiseOn @118;
     cruiseOff @119;
-    noTargetAcc @120;
-    autoLaneChange @121;
 
     radarCanErrorDEPRECATED @15;
     communityFeatureDisallowedDEPRECATED @62;
@@ -145,6 +142,7 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     modelLagWarningDEPRECATED @93;
     startupOneplusDEPRECATED @82;
     startupFuzzyFingerprintDEPRECATED @97;
+    noTargetDEPRECATED @25;
   }
 }
 
@@ -224,8 +222,10 @@ struct CarState {
 
   # neokii
   vCluRatio @46 :Float32;
-  autoHold @47 :Int32;
+  autoHold @47 :Int8;
   tpms @48 :Tpms;
+  navSpeedLimit @49 :Int16;
+  aReqValue @50 :Float32;
 
   struct Tpms {
     fl @0 :Float32;
@@ -356,8 +356,7 @@ struct CarControl {
   sccBus @20 :UInt8;
 
   applyAccel @21 :Float32;
-  aReqValue @22 :Float32;
-  debugText @23 :Text;
+  debugText @22 :Text;
 
   struct Actuators {
     # range from 0.0 - 1.0
@@ -714,4 +713,5 @@ struct CarParams {
   hasScc14 @75 :Bool;
   hasEms @76 :Bool;
   hasLfaHda @77 :Bool;
+  hasNav @78 :Bool;
 }

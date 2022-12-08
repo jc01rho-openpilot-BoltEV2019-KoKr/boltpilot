@@ -254,6 +254,9 @@ class Controls:
     #  (CS.regenBraking and (not self.CS_prev.regenBraking or not CS.standstill)):
     #  self.events.add(EventName.pedalPressed)
 
+    if CS.brakePressed and CS.standstill:
+      self.events.add(EventName.preEnableStandstill)
+
     if CS.gasPressed:
       self.events.add(EventName.gasPressedOverride)
 
@@ -422,19 +425,6 @@ class Controls:
       if self.sm['liveLocationKalman'].excessiveResets:
         self.events.add(EventName.localizerMalfunction)
 
-    # Only allow engagement with brake pressed when stopped behind another stopped car
-    speeds = self.sm['longitudinalPlan'].speeds
-    if len(speeds) > 1:
-      v_future = speeds[-1]
-    else:
-      v_future = 100.0
-    if CS.brakePressed and v_future >= self.CP.vEgoStarting \
-      and self.CP.openpilotLongitudinalControl and CS.vEgo < 0.3:
-
-      if CruiseStateManager.instance().cruise_state_control and CruiseStateManager.instance().enabled:
-        self.events.add(EventName.noTargetAcc)
-        CruiseStateManager.instance().enabled = False
-
   def data_sample(self):
     """Receive data from sockets and update carState"""
 
@@ -532,10 +522,7 @@ class Controls:
 
         # PRE ENABLING
         elif self.state == State.preEnabled:
-          if self.events.any(ET.NO_ENTRY):
-            self.state = State.disabled
-            self.current_alert_types.append(ET.NO_ENTRY)
-          elif not self.events.any(ET.PRE_ENABLE):
+          if not self.events.any(ET.PRE_ENABLE):
             self.state = State.enabled
           else:
             self.current_alert_types.append(ET.PRE_ENABLE)
@@ -602,7 +589,7 @@ class Controls:
     # Check which actuators can be enabled
     CC.latActive = self.active and not CS.steerFaultTemporary and not CS.steerFaultPermanent and \
                    CS.vEgo > self.CP.minSteerSpeed and not CS.standstill
-    CC.longActive = self.active and not self.events.any(ET.OVERRIDE_LONGITUDINAL) and self.CP.openpilotLongitudinalControl \
+    CC.longActive = self.enabled and not self.events.any(ET.OVERRIDE_LONGITUDINAL) and self.CP.openpilotLongitudinalControl \
                     and CS.cruiseState.enabled
 
     actuators = CC.actuators

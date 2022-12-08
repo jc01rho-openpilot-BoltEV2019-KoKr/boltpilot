@@ -9,6 +9,7 @@ from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.car.hyundai import hyundaicanfd, hyundaican, hyundaiexcan
 from selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CANFD_CAR, CAR, \
   LEGACY_SAFETY_MODE_CAR, FEATURES
+from selfdrive.car.interfaces import ACCEL_MAX, ACCEL_MIN
 from selfdrive.controls.neokii.cruise_state_manager import CruiseStateManager
 from selfdrive.controls.neokii.navi_controller import SpeedLimiter
 from selfdrive.controls.neokii.speed_controller import CREEP_SPEED
@@ -64,12 +65,12 @@ class CarController:
     self.last_lead_distance = 0
     self.resume_wait_timer = 0
 
-    self.prev_accel_req_value = 0
-
     from common.params import Params
     params = Params()
     self.ldws_opt = params.get_bool('IsLdwsCar')
     self.e2e_long = params.get_bool('ExperimentalMode')
+
+    self.stock_accel_weight = 0
 
   def update(self, CC, CS):
     actuators = CC.actuators
@@ -77,9 +78,6 @@ class CarController:
 
     # steering torque
     steer = actuators.steer
-    if self.CP.carFingerprint in (CAR.KONA, CAR.KONA_EV, CAR.KONA_HEV, CAR.KONA_EV_2022):
-      # these cars have significantly more torque than most HKG; limit to 70% of max
-      steer = clip(steer, -0.7, 0.7)
     new_steer = int(round(steer * self.params.STEER_MAX))
     apply_steer = apply_std_steer_torque_limits(new_steer, self.apply_steer_last, CS.out.steeringTorque, self.params)
 
@@ -194,19 +192,25 @@ class CarController:
         jerk = 3.0 if actuators.longControlState == LongCtrlState.pid else 1.0
 
         if CC.longActive:
-          start_boost = interp(CS.out.vEgo, [CREEP_SPEED, 2 * CREEP_SPEED], [0.2 if self.e2e_long else 0.4, 0.0])
+          start_boost = interp(CS.out.vEgo, [CREEP_SPEED, 1.6 * CREEP_SPEED], [0.2 if self.e2e_long else 0.5, 0.0])
           is_accelerating = interp(accel, [0.0, 0.2], [0.0, 1.0])
           boost = start_boost * is_accelerating
           accel += boost
 
+        stock_cam = False
+        if self.CP.sccBus == 2:
+          aReqValue = CS.scc12["aReqValue"]
+          if not SpeedLimiter.instance().get_active() and ACCEL_MIN <= aReqValue <= ACCEL_MAX:
+            accel, stock_cam = self.get_stock_cam_accel(accel, aReqValue, CS.scc11)
+
         if self.CP.sccBus == 0:
           can_sends.extend(hyundaican.create_acc_commands(self.packer, CC.enabled, accel, jerk, int(self.frame / 2),
                                                         hud_control.leadVisible, set_speed_in_units, stopping,
-                                                          CC.cruiseControl.override, CS))
+                                                          CC.cruiseControl.override, CS, stock_cam))
         else:
           can_sends.extend(hyundaiexcan.create_acc_commands(self.packer, CC.enabled, accel, jerk, int(self.frame / 2),
                                                           hud_control.leadVisible, set_speed_in_units, stopping,
-                                                          CC.cruiseControl.override, CS))
+                                                          CC.cruiseControl.override, CS, stock_cam))
 
       # 5 Hz ACC options
       if self.frame % 20 == 0 and self.CP.openpilotLongitudinalControl:
@@ -222,9 +226,6 @@ class CarController:
       # 20 Hz LFA MFA message
       if self.frame % 5 == 0 and self.car_fingerprint in FEATURES["send_lfa_mfa"]:
         can_sends.append(hyundaican.create_lfahda_mfc(self.packer, CC.enabled, SpeedLimiter.instance().get_active()))
-
-      CC.aReqValue = CS.scc12["aReqValue"] if "aReqValue" in CS.scc12 else self.prev_accel_req_value
-      self.prev_accel_req_value = CC.aReqValue
 
     CC.applyAccel = accel
 
@@ -259,4 +260,17 @@ class CarController:
 
     elif self.last_lead_distance != 0:
       self.last_lead_distance = 0
+
+
+  def get_stock_cam_accel(self, apply_accel, stock_accel, scc11):
+    stock_cam = scc11["Navi_SCC_Camera_Act"] == 2 and scc11["Navi_SCC_Camera_Status"] == 2
+    if stock_cam:
+      self.stock_accel_weight += DT_CTRL / 3.
+    else:
+      self.stock_accel_weight -= DT_CTRL / 3.
+
+    self.stock_weight = clip(self.stock_accel_weight, 0., 1.)
+
+    accel = stock_accel * self.stock_weight + apply_accel * (1. - self.stock_weight)
+    return min(accel, apply_accel), stock_cam
 

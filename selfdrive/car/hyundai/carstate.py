@@ -4,11 +4,12 @@ import math
 
 from cereal import car
 from common.conversions import Conversions as CV
+from common.numpy_fast import interp
 from opendbc.can.parser import CANParser
 from opendbc.can.can_define import CANDefine
 from selfdrive.car.hyundai.interface import BUTTONS_DICT
 from selfdrive.controls.neokii.cruise_state_manager import CruiseStateManager
-from selfdrive.car.hyundai.values import HyundaiFlags, DBC, FEATURES, CANFD_CAR, EV_CAR, HYBRID_CAR, Buttons, CarControllerParams
+from selfdrive.car.hyundai.values import HyundaiFlags, CAR, DBC, FEATURES, CANFD_CAR, EV_CAR, HYBRID_CAR, Buttons, CarControllerParams
 from selfdrive.car.interfaces import CarStateBase
 
 PREV_BUTTON_SAMPLES = 8
@@ -67,9 +68,23 @@ class CarState(CarStateBase):
       cp.vl["WHL_SPD11"]["WHL_SPD_RL"],
       cp.vl["WHL_SPD11"]["WHL_SPD_RR"],
     )
-    ret.vEgoRaw = (ret.wheelSpeeds.fl + ret.wheelSpeeds.fr + ret.wheelSpeeds.rl + ret.wheelSpeeds.rr) / 4.
+
+    ######
+    cluSpeed = cp.vl["CLU11"]["CF_Clu_Vanz"]
+    decimal = cp.vl["CLU11"]["CF_Clu_VanzDecimal"]
+    if 0. < decimal < 0.5:
+      cluSpeed += decimal
+
+    vEgoClu = cluSpeed * speed_conv
+    ret.vEgoCluster, _ = self.update_clu_speed_kf(vEgoClu)
+
+    vEgoRaw = (ret.wheelSpeeds.fl + ret.wheelSpeeds.fr + ret.wheelSpeeds.rl + ret.wheelSpeeds.rr) / 4.
+    ret.vEgoRaw = interp(vEgoRaw, [0., 3.], [(vEgoRaw + vEgoClu) / 2., vEgoRaw])
     ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
     ret.standstill = ret.vEgoRaw < 0.1
+
+    ret.vCluRatio = (ret.vEgo / ret.vEgoCluster) if (ret.vEgoCluster > 3. and ret.vEgo > 3.) else 1.0
+    #####
 
     self.cluster_speed_counter += 1
     if self.cluster_speed_counter > CLUSTER_SAMPLE_RATE:
@@ -79,8 +94,6 @@ class CarState(CarStateBase):
       # mimic how dash converts to imperial
       if not self.is_metric:
         self.cluster_speed = math.floor(self.cluster_speed * CV.KPH_TO_MPH + CV.KPH_TO_MPH)
-
-    ret.vEgoCluster = self.cluster_speed * speed_conv
 
     ret.steeringAngleDeg = cp.vl["SAS11"]["SAS_Angle"]
     ret.steeringRateDeg = cp.vl["SAS11"]["SAS_Speed"]
@@ -162,8 +175,8 @@ class CarState(CarStateBase):
     self.brake_error = self.cruise_unavail_cnt > 100
 
     self.mdps12 = copy.copy(cp.vl["MDPS12"])
-    self.scc11 = copy.copy(cp_cruise.vl["SCC11"])
-    self.scc12 = copy.copy(cp_cruise.vl["SCC12"])
+    self.scc11 = copy.copy(cp_cruise.vl["SCC11"]) if "SCC11" in cp_cruise.vl else None
+    self.scc12 = copy.copy(cp_cruise.vl["SCC12"]) if "SCC12" in cp_cruise.vl else None
     self.scc13 = copy.copy(cp_cruise.vl["SCC13"]) if self.CP.hasScc13 else None
     self.scc14 = copy.copy(cp_cruise.vl["SCC14"]) if self.CP.hasScc14 else None
 
@@ -174,12 +187,15 @@ class CarState(CarStateBase):
 
     ret.steerFaultTemporary = self.mdps_error_cnt > 50
 
-    if "SCC11" in cp_cruise.vl and "ACC_ObjDist" in cp_cruise.vl["SCC11"]:
-      self.lead_distance = cp_cruise.vl["SCC11"]["ACC_ObjDist"]
+    ret.brakeLights = bool(cp.vl["TCS13"]["BrakeLight"] or ret.brakePressed)
+
+    if self.scc11 is not None and "ACC_ObjDist" in self.scc11:
+      self.lead_distance = self.scc11["ACC_ObjDist"]
     else:
       self.lead_distance = -1
 
-    ret.brakeLights = bool(cp.vl["TCS13"]["BrakeLight"] or ret.brakePressed)
+    if self.scc12 is not None and "aReqValue" in self.scc12:
+      ret.aReqValue = self.scc12["aReqValue"]
 
     tpms_unit = cp.vl["TPMS11"]["UNIT"] * 0.725 if int(cp.vl["TPMS11"]["UNIT"]) > 0 else 1.
     ret.tpms.fl = tpms_unit * cp.vl["TPMS11"]["PRESSURE_FL"]
@@ -190,14 +206,8 @@ class CarState(CarStateBase):
     if self.CP.hasAutoHold:
       ret.autoHold = cp.vl["ESP11"]["AVH_STAT"]
 
-    cluSpeed = cp.vl["CLU11"]["CF_Clu_Vanz"]
-    decimal = cp.vl["CLU11"]["CF_Clu_VanzDecimal"]
-    if 0. < decimal < 0.5:
-      cluSpeed += decimal
-
-    ret.vEgoCluster = cluSpeed * speed_conv
-    vEgoClu, aEgoClu = self.update_clu_speed_kf(ret.vEgoCluster)
-    ret.vCluRatio = (ret.vEgo / vEgoClu) if (vEgoClu > 3. and ret.vEgo > 3.) else 1.0
+    if self.CP.hasNav:
+      ret.navSpeedLimit = cp.vl["Navi_HU"]["SpeedLim_Nav_Clu"]
 
     if self.CP.openpilotLongitudinalControl and CruiseStateManager.instance().cruise_state_control:
       available = ret.cruiseState.available if self.CP.sccBus == 2 else -1
@@ -250,7 +260,9 @@ class CarState(CarStateBase):
       ret.rightBlindspot = cp.vl["BLINDSPOTS_REAR_CORNERS"]["FR_INDICATOR"] != 0
 
     ret.cruiseState.available = True
-    self.is_metric = cp.vl["CLUSTER_INFO"]["DISTANCE_UNIT"] != 1
+    cruise_btn_msg = "CRUISE_BUTTONS_ALT" if self.CP.flags & HyundaiFlags.CANFD_ALT_BUTTONS else "CRUISE_BUTTONS"
+    distance_unit_msg = cruise_btn_msg if self.CP.carFingerprint == CAR.KIA_SORENTO_PHEV_4TH_GEN else "CLUSTER_INFO"
+    self.is_metric = cp.vl[distance_unit_msg]["DISTANCE_UNIT"] != 1
     if not self.CP.openpilotLongitudinalControl:
       speed_factor = CV.KPH_TO_MS if self.is_metric else CV.MPH_TO_MS
       cp_cruise_info = cp_cam if self.CP.flags & HyundaiFlags.CANFD_CAMERA_SCC else cp
@@ -259,7 +271,6 @@ class CarState(CarStateBase):
       ret.cruiseState.enabled = cp_cruise_info.vl["SCC_CONTROL"]["ACCMode"] in (1, 2)
       self.cruise_info = copy.copy(cp_cruise_info.vl["SCC_CONTROL"])
 
-    cruise_btn_msg = "CRUISE_BUTTONS_ALT" if self.CP.flags & HyundaiFlags.CANFD_ALT_BUTTONS else "CRUISE_BUTTONS"
     self.prev_cruise_buttons = self.cruise_buttons[-1]
     self.cruise_buttons.extend(cp.vl_all[cruise_btn_msg]["CRUISE_BUTTONS"])
     self.main_buttons.extend(cp.vl_all[cruise_btn_msg]["ADAPTIVE_CRUISE_MAIN_BTN"])
@@ -328,6 +339,7 @@ class CarState(CarStateBase):
       ("BrakeLight", "TCS13"),
       ("aBasis", "TCS13"),
       ("DriverBraking", "TCS13"),
+      ("StandStill", "TCS13"),
       ("PBRAKE_ACT", "TCS13"),
       ("DriverOverride", "TCS13"),
       ("CF_VSM_Avail", "TCS13"),
@@ -381,6 +393,10 @@ class CarState(CarStateBase):
         ("TauGapSet", "SCC11"),
         ("ACCMode", "SCC12"),
         ("aReqValue", "SCC12"),
+        ("Navi_SCC_Curve_Status", "SCC11"),
+        ("Navi_SCC_Curve_Act", "SCC11"),
+        ("Navi_SCC_Camera_Act", "SCC11"),
+        ("Navi_SCC_Camera_Status", "SCC11"),
       ]
       checks += [
         ("SCC11", 50),
@@ -442,6 +458,10 @@ class CarState(CarStateBase):
         ("LDM_STAT", "ESP11"),
       ]
       checks += [("ESP11", 50)]
+
+    if CP.hasNav:
+      signals += [("SpeedLim_Nav_Clu", "Navi_HU")]
+      checks += [("Navi_HU", 5)]
 
     return CANParser(DBC[CP.carFingerprint]["pt"], signals, checks, 0, enforce_checks=False)
 
@@ -579,6 +599,9 @@ class CarState(CarStateBase):
       ("DRIVER_DOOR_OPEN", "DOORS_SEATBELTS"),
       ("DRIVER_SEATBELT_LATCHED", "DOORS_SEATBELTS"),
     ]
+
+    if CP.carFingerprint == CAR.KIA_SORENTO_PHEV_4TH_GEN:
+      signals.append(("DISTANCE_UNIT", cruise_btn_msg))
 
     checks = [
       ("WHEEL_SPEEDS", 100),

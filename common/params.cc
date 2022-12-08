@@ -197,12 +197,15 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"Offroad_TemperatureTooHigh", CLEAR_ON_MANAGER_START},
     {"Offroad_UnofficialHardware", CLEAR_ON_MANAGER_START},
     {"Offroad_UpdateFailed", CLEAR_ON_MANAGER_START},
+    {"MapboxToken", PERSISTENT},
 
     // Community
     {"SelectedCar", PERSISTENT},
     {"UseLanelines", PERSISTENT},
     {"SccOnBus2", PERSISTENT},
     {"CruiseStateControl", PERSISTENT},
+    {"SccGapAdjust", PERSISTENT},
+
     {"IsLdwsCar", PERSISTENT},
     {"HapticFeedbackWhenSpeedCamera", PERSISTENT},
     {"ShowDebugMessage", PERSISTENT},

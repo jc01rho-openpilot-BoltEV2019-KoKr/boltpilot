@@ -44,14 +44,10 @@ ACADOS_SOLVER_TYPE = 'SQP_RTI'
 
 
 CRUISE_GAP_BP = [1., 2., 3., 4.]
-CRUISE_GAP_V = [1.1, 1.3, 1.6, 1.8]
-CRUISE_GAP_E2E_V = [1.3, 1.45, 1.6, 1.8]
+CRUISE_GAP_V = [1.0, 1.2, 1.5, 1.8]
+CRUISE_GAP_E2E_V = [1.1, 1.3, 1.6, 1.8]
 
-AUTO_TR_BP = [0., 30.*CV.KPH_TO_MS, 70.*CV.KPH_TO_MS, 110.*CV.KPH_TO_MS]
-AUTO_TR_V = [1.2, 1.3, 1.4, 1.5]
-
-AUTO_TR_CRUISE_GAP = 4
-DIFF_RADAR_VISION = 2.0
+DIFF_RADAR_VISION = 1.5
 
 
 # Fewer timestamps don't hurt performance and lead to
@@ -67,7 +63,7 @@ MIN_ACCEL = -3.5
 MAX_ACCEL = 2.0
 T_FOLLOW = 1.45
 COMFORT_BRAKE = 2.5
-STOP_DISTANCE = 6.0
+STOP_DISTANCE = 5.0
 STOP_DISTANCE_E2E = 5.0
 
 def get_stopped_equivalence_factor(v_lead):
@@ -333,14 +329,8 @@ class LongitudinalMpc:
 
     # neokii
     gapAdjust = carstate.cruiseState.gapAdjust
-    cruise_gap = int(clip(gapAdjust, 1., 4.)) if gapAdjust > 0 else AUTO_TR_CRUISE_GAP
-    if cruise_gap == AUTO_TR_CRUISE_GAP:
-      tr = interp(carstate.vEgo, AUTO_TR_BP, AUTO_TR_V) if self.mode == 'acc' else T_FOLLOW
-    else:
-      tr = interp(float(cruise_gap), CRUISE_GAP_BP, CRUISE_GAP_V if self.mode == 'acc' else CRUISE_GAP_E2E_V)
-
-    self.t_follow = tr
-
+    cruise_gap = int(clip(gapAdjust, 1., 4.)) if gapAdjust > 0 else 4
+    self.t_follow = interp(float(cruise_gap), CRUISE_GAP_BP, CRUISE_GAP_V if self.mode == 'acc' else CRUISE_GAP_E2E_V)
     self.stop_dist = STOP_DISTANCE if self.mode == 'acc' else STOP_DISTANCE_E2E
 
     # To estimate a safe distance from a moving lead, we calculate how much stopping
@@ -386,6 +376,10 @@ class LongitudinalMpc:
 
     else:
       raise NotImplementedError(f'Planner mode {self.mode} not recognized in planner update')
+
+    if self.status:
+      d_rel = radarstate.leadOne.dRel if radarstate.leadOne.status else radarstate.leadTwo.dRel
+      self.params[:, 5] = interp(d_rel, [STOP_DISTANCE, 20], [1.0, 0.7])
 
     self.yref[:,1] = x
     self.yref[:,2] = v
