@@ -34,7 +34,7 @@ jobs:
           use-black: false
           use-mypy: false
           use-isort: false
-          extra-pylint-options: --disable=C,R,E0401,W0612,W0101,W0611,W0613,W0511,W0311,W0954,W0703,W0621,W0201,W0109,W0235,W0603,W0212
+          extra-pylint-options: --disable=C,R,E0401,W0612,W0101,W0611,W0613,W0511,W0311,W0954,W0703,W0621,W0201,W0109,W0235,W0603,W0212,W0107,W0702
           extra-flake8-options: --select=F21,F822,F823,F831,F811,F812,E999
 
       - name: Python Linter
@@ -48,7 +48,7 @@ jobs:
           use-black: false
           use-mypy: false
           use-isort: false
-          extra-pylint-options: --disable=C,R,E0401,W0612,W0101,W0611,W0613,W0511,W0311,W0954,W0703,W0621,W0201,W0109,W0235,W0603,W0106
+          extra-pylint-options: --disable=C,R,E0401,W0612,W0101,W0611,W0613,W0511,W0311,W0954,W0703,W0621,W0201,W0109,W0235,W0603,W0106,W0107,W0702
           extra-flake8-options: --select=F21,F822,F823,F831,F811,F812,E999
 
   build:
@@ -110,25 +110,46 @@ jobs:
           sudo cp -p /bin/true /usr/bin/mandb
           sudo rm -r /var/cache/man
 
-      - name: apt-update
-        run : sudo apt update -y ;
+#      - name: apt-update
+#        run : sudo apt update -y ;
 
       - name: mkdir
         run : mkdir -p /home/runner/.cache/apt/archives/partial
 
-      - name: apt-install #libyuv-dev  cythonize 누락함
-        run : sudo apt install -y  -o=dir::cache=/home/runner/.cache/apt python3-testresources pip capnproto clang libcapnp-dev libzmq3-dev opencl-headers libeigen3-dev ocl-icd-opencl-dev gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi libusb-1.0-0* qtchooser qt5ct sudo apt  qt5-qmake qt5-assistant qt5-qmake-bin qt5-gtk2-platformtheme qt5-qmltooling-plugins qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools libcurl4-openssl-dev libavcodec-dev openssl libavformat-dev sudo apt  libjpeg-dev libssl-dev libbz2-dev libsystemd-dev libswscale-dev unzip libqt5multimedia5 libqt5multimedia5-plugins qt5-qmltooling-plugins libqt5multimedia* libqt53dcore5 libqt53dcore5 sudo apt  libqt53dextras5 libqt53dinput5 qtbase5-private-dev qtmultimedia5-dev qtpositioning5-dev libqt5location5 libgsl-dev libqt5location5* ffmpeg libqt5widgets5 libqt5gui5 libqt5dbus5 sudo apt  libqt5network5 libqt5core5a qtlocation5-dev qtlocation5-dev qtpositioning5-dev qml-module-qtquick2 qml-module-qtpositioning qml-module-qtgraphicaleffects qml-module-qtquick-layouts sudo apt  qml-module-qtquick-controls libffmpeg-nvenc-dev cmake libomxil-bellagio0 libomxil-bellagio-dev autoconf automake build-essential libass-dev libfreetype6-dev libgpac-dev libsdl1.2-dev libtheora-dev libtool libva-dev libvdpau-dev libvorbis-dev libx11-dev libxext-dev libxfixes-dev pkg-config texi2html zlib1g-dev
+#      - name: apt-install #libyuv-dev  cythonize 누락함
+#        run : sudo apt install -y  -o=dir::cache=/home/runner/.cache/apt python3-testresources curl pip capnproto clang libcapnp-dev libzmq3-dev opencl-headers libeigen3-dev ocl-icd-opencl-dev gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi libusb-1.0-0* qtchooser qt5ct sudo apt  qt5-qmake qt5-assistant qt5-qmake-bin qt5-gtk2-platformtheme qt5-qmltooling-plugins qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools libcurl4-openssl-dev libavcodec-dev openssl libavformat-dev sudo apt  libjpeg-dev libssl-dev libbz2-dev libsystemd-dev libswscale-dev unzip libqt5multimedia5 libqt5multimedia5-plugins qt5-qmltooling-plugins libqt5multimedia* libqt53dcore5 libqt53dcore5 sudo apt  libqt53dextras5 libqt53dinput5 qtbase5-private-dev qtmultimedia5-dev qtpositioning5-dev libqt5location5 libgsl-dev libqt5location5* ffmpeg libqt5widgets5 libqt5gui5 libqt5dbus5 sudo apt  libqt5network5 libqt5core5a qtlocation5-dev qtlocation5-dev qtpositioning5-dev qml-module-qtquick2 qml-module-qtpositioning qml-module-qtgraphicaleffects qml-module-qtquick-layouts sudo apt  qml-module-qtquick-controls libffmpeg-nvenc-dev cmake libomxil-bellagio0 libomxil-bellagio-dev autoconf automake build-essential libass-dev libfreetype6-dev libgpac-dev libsdl1.2-dev libtheora-dev libtool libva-dev libvdpau-dev libvorbis-dev libx11-dev libxext-dev libxfixes-dev pkg-config texi2html zlib1g-dev ffmpeg
+#        run : sudo apt install -y  -o=dir::cache=/home/runner/.cache/apt python3-testresources curl pip capnproto clang libcapnp-dev libzmq3-dev opencl-headers libeigen3-dev ocl-icd-opencl-dev gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi libusb-1.0-0* qtchooser qt5ct sudo apt  qt5-qmake qt5-assistant qt5-qmake-bin qt5-gtk2-platformtheme qt5-qmltooling-plugins qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools libcurl4-openssl-dev libavcodec-dev openssl libavformat-dev sudo apt  libjpeg-dev libssl-dev libbz2-dev libsystemd-dev libswscale-dev unzip libqt5multimedia5 libqt5multimedia5-plugins qt5-qmltooling-plugins libqt5multimedia* libqt53dcore5 libqt53dcore5 sudo apt  libqt53dextras5 libqt53dinput5 qtbase5-private-dev qtmultimedia5-dev qtpositioning5-dev libqt5location5 libgsl-dev libqt5location5* ffmpeg libqt5widgets5 libqt5gui5 libqt5dbus5 sudo apt  libqt5network5 libqt5core5a qtlocation5-dev qtlocation5-dev qtpositioning5-dev qml-module-qtquick2 qml-module-qtpositioning qml-module-qtgraphicaleffects qml-module-qtquick-layouts sudo apt  qml-module-qtquick-controls libffmpeg-nvenc-dev cmake libomxil-bellagio0 libomxil-bellagio-dev autoconf automake build-essential libass-dev libfreetype6-dev libgpac-dev libsdl1.2-dev libtheora-dev libtool libva-dev libvdpau-dev libvorbis-dev libx11-dev libxext-dev libxfixes-dev pkg-config texi2html zlib1g-dev ffmpeg
 
-      - name: apt-chmod #libyuv-dev  cythonize 누락함
-        run : sudo chmod 777 -R /home/runner/.cache/apt/
+#      - name: apt-chmod #libyuv-dev  cythonize 누락함
+#        run : sudo chmod 777 -R /home/runner/.cache/apt/
 
-      - name: pip-install
-        run : pip install --upgrade  setuptools pip & pip install scons sympy cython numpy pycapnp cffi zmq smbus2 casadi pycryptodome future-fstrings setproctitle hatanaka pycurl atomicwrites
+#      - name: pip-install
+#        run : pip install --upgrade  setuptools pip
+#        run : pip install --upgrade  setuptools pip & pip install scons sympy cython numpy pycapnp cffi zmq smbus2 casadi pycryptodome future-fstrings setproctitle hatanaka pycurl atomicwrites
 
       - name: scons-cache-clean
         if: steps.date.outputs.date == '1'
         run : scons -c
-      
-      
-      - name: scons-build
-        run : scons -j${{ steps.cpu-cores.outputs.count }}
+
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8.10'
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - name: scons-env
+        run : tools/ubuntu_setup.sh;
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: poetry
+        run : poetry run scons -u -j${{ steps.cpu-cores.outputs.count }} ;
+
