@@ -1,12 +1,12 @@
-from enum import IntFlag
 from dataclasses import dataclass
+from enum import Enum, IntFlag
 from typing import Dict, List, Optional, Union
 
 from cereal import car
 from panda.python import uds
 from common.conversions import Conversions as CV
 from selfdrive.car import dbc_dict
-from selfdrive.car.docs_definitions import CarInfo, Harness
+from selfdrive.car.docs_definitions import CarFootnote, CarInfo, Column, Harness
 from selfdrive.car.fw_query_definitions import FwQueryConfig, Request, p16
 
 Ecu = car.CarParams.Ecu
@@ -57,6 +57,8 @@ class HyundaiFlags(IntFlag):
   CANFD_CAMERA_SCC = 8
 
   ALT_LIMITS = 16
+
+  ENABLE_BLINKERS = 32
 
 
 class CAR:
@@ -117,9 +119,20 @@ class CAR:
   GENESIS_G90 = "GENESIS G90 2017"
 
 
+class Footnote(Enum):
+  CANFD = CarFootnote(
+    "Requires a <a href=\"https://comma.ai/shop/panda\" target=\"_blank\">red panda</a>, additional <a href=\"https://comma.ai/shop/harness-box\" target=\"_blank\">harness box</a>, " +
+    "additional <a href=\"https://comma.ai/shop/obd-c-cable\" target=\"_blank\">OBD-C cable</a>, USB-A to USB-A cable, and a USB-A to USB-C OTG dongle.",
+    Column.MODEL, shop_footnote=True)
+
+
 @dataclass
 class HyundaiCarInfo(CarInfo):
   package: str = "Smart Cruise Control (SCC)"
+
+  def init_make(self, CP: car.CarParams):
+    if CP.carFingerprint in CANFD_CAR:
+      self.footnotes.insert(0, Footnote.CANFD)
 
 
 CAR_INFO: Dict[str, Optional[Union[HyundaiCarInfo, List[HyundaiCarInfo]]]] = {
@@ -834,6 +847,7 @@ FW_VERSIONS = {
       b'\xf1\x00LX2_ SCC FHCUP      1.00 1.04 99110-S8100         ',
       b'\xf1\x00LX2_ SCC FHCUP      1.00 1.05 99110-S8100         ',
       b'\xf1\x00ON__ FCA FHCUP      1.00 1.02 99110-S9100         ',
+      b'\xf1\x00ON__ FCA FHCUP      1.00 1.01 99110-S9110         ',
     ],
     (Ecu.abs, 0x7d1, None): [
       b'\xf1\x00LX ESC \x01 103\x19\t\x10 58910-S8360',
@@ -847,6 +861,7 @@ FW_VERSIONS = {
       b'\xf1\x00ON ESC \x0b 100\x18\x12\x18 58910-S9360',
       b'\xf1\x00ON ESC \x0b 101\x19\t\x08 58910-S9360',
       b'\xf1\x00ON ESC \x0b 101\x19\t\x05 58910-S9320',
+      b'\xf1\x00ON ESC \x01 101\x19\t\x08 58910-S9360',
     ],
     (Ecu.engine, 0x7e0, None): [
       b'\xf1\x81640J0051\x00\x00\x00\x00\x00\x00\x00\x00',
@@ -869,11 +884,13 @@ FW_VERSIONS = {
       b'\xf1\x00ON  MFC  AT USA LHD 1.00 1.01 99211-S9100 181105',
       b'\xf1\x00ON  MFC  AT USA LHD 1.00 1.03 99211-S9100 200720',
       b'\xf1\x00LX2 MFC  AT USA LHD 1.00 1.00 99211-S8110 210226',
+      b'\xf1\x00ON  MFC  AT USA LHD 1.00 1.04 99211-S9100 211227',
     ],
     (Ecu.transmission, 0x7e1, None): [
       b'\xf1\x00bcsh8p54  U872\x00\x00\x00\x00\x00\x00TON4G38NB1\x96z28',
       b'\xf1\x00bcsh8p54  U891\x00\x00\x00\x00\x00\x00SLX4G38NB3X\xa8\xc08',
       b'\xf1\x00bcsh8p54  U903\x00\x00\x00\x00\x00\x00TON4G38NB2[v\\\xb6',
+      b'\xf1\x00bcsh8p54  U922\x00\x00\x00\x00\x00\x00TON2G38NB5j\x94.\xde',
       b'\xf1\x87LBLUFN591307KF25vgvw\x97wwwy\x99\xa7\x99\x99\xaa\xa9\x9af\x88\x96h\x95o\xf7\xff\x99f/\xff\xe4c\xf1\x81U891\x00\x00\x00\x00\x00\x00\xf1\x00bcsh8p54  U891\x00\x00\x00\x00\x00\x00SLX2G38NB2\xd7\xc1/\xd1',
       b'\xf1\x87LBLUFN650868KF36\xa9\x98\x89\x88\xa8\x88\x88\x88h\x99\xa6\x89fw\x86gw\x88\x97x\xaa\x7f\xf6\xff\xbb\xbb\x8f\xff+\x82\xf1\x81U891\x00\x00\x00\x00\x00\x00\xf1\x00bcsh8p54  U891\x00\x00\x00\x00\x00\x00SLX2G38NB3\xd1\xc3\xf8\xa8',
       b'\xf1\x87LBLUFN655162KF36\x98\x88\x88\x88\x98\x88\x88\x88x\x99\xa7\x89x\x99\xa7\x89x\x99\x97\x89g\x7f\xf7\xffwU_\xff\xe9!\xf1\x81U891\x00\x00\x00\x00\x00\x00\xf1\x00bcsh8p54  U891\x00\x00\x00\x00\x00\x00SLX2G38NB3\xd1\xc3\xf8\xa8',
