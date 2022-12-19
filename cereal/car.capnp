@@ -337,6 +337,9 @@ struct CarControl {
   # Actuator commands as computed by controlsd
   actuators @6 :Actuators;
 
+  leftBlinker @15: Bool;
+  rightBlinker @16: Bool;
+
   # Any car specific rate limits or quirks applied by
   # the CarController are reflected in actuatorsOutput
   # and matches what is sent to the car
@@ -348,15 +351,15 @@ struct CarControl {
   cruiseControl @4 :CruiseControl;
   hudControl @5 :HUDControl;
 
-  applyMaxSpeed @15 :Float32;
-  cruiseMaxSpeed @16 :Float32;
-  autoTrGap @17 :UInt32;
-  steerRatio @18 :Float32;
-  steerActuatorDelay @19 :Float32;
-  sccBus @20 :UInt8;
+  applyMaxSpeed @17 :Float32;
+  cruiseMaxSpeed @18 :Float32;
+  autoTrGap @19 :UInt32;
+  steerRatio @20 :Float32;
+  steerActuatorDelay @21 :Float32;
+  sccBus @22 :UInt8;
 
-  applyAccel @21 :Float32;
-  debugText @22 :Text;
+  applyAccel @23 :Float32;
+  debugText @24 :Text;
 
   struct Actuators {
     # range from 0.0 - 1.0

@@ -18,6 +18,7 @@ class CarControllerParams:
   ACCEL_MAX = 1.5  # m/s2, lower than allowed 2.0 m/s2 for tuning reasons
   ACCEL_MIN = -3.5  # m/s2
 
+  STEER_STEP = 1
   STEER_MAX = 1500
   STEER_ERROR_MAX = 350     # max delta between torque cmd and torque motor
 
@@ -741,6 +742,7 @@ FW_VERSIONS = {
       b'\x018966312Q8000\x00\x00\x00\x00',
       b'\x018966312R0000\x00\x00\x00\x00',
       b'\x018966312R0100\x00\x00\x00\x00',
+      b'\x018966312R0200\x00\x00\x00\x00',
       b'\x018966312R1000\x00\x00\x00\x00',
       b'\x018966312R1100\x00\x00\x00\x00',
       b'\x018966312R3100\x00\x00\x00\x00',
@@ -794,6 +796,7 @@ FW_VERSIONS = {
       b'\x01F152612B60\x00\x00\x00\x00\x00\x00',
       b'\x01F152612B61\x00\x00\x00\x00\x00\x00',
       b'\x01F152612B62\x00\x00\x00\x00\x00\x00',
+      b'\x01F152612B70\x00\x00\x00\x00\x00\x00',
       b'\x01F152612B71\x00\x00\x00\x00\x00\x00',
       b'\x01F152612B81\x00\x00\x00\x00\x00\x00',
       b'\x01F152612B90\x00\x00\x00\x00\x00\x00',

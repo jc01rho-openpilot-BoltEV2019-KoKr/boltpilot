@@ -20,16 +20,13 @@ OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   stacked_layout->setStackingMode(QStackedLayout::StackAll);
   main_layout->addLayout(stacked_layout);
 
-  QStackedLayout *road_view_layout = new QStackedLayout;
-  road_view_layout->setStackingMode(QStackedLayout::StackAll);
   nvg = new AnnotatedCameraWidget(VISION_STREAM_ROAD, this);
-  road_view_layout->addWidget(nvg);
 
   QWidget * split_wrapper = new QWidget;
   split = new QHBoxLayout(split_wrapper);
   split->setContentsMargins(0, 0, 0, 0);
   split->setSpacing(0);
-  split->addLayout(road_view_layout);
+  split->addWidget(nvg);
 
   if (getenv("DUAL_CAMERA_VIEW")) {
     CameraWidget *arCam = new CameraWidget("camerad", VISION_STREAM_ROAD, true, this);
@@ -106,53 +103,82 @@ void OnroadWindow::updateState(const UIState &s) {
 
 void OnroadWindow::mouseReleaseEvent(QMouseEvent* e) {
 
-  QPoint endPos = e->pos();
-  int dx = endPos.x() - startPos.x();
-  int dy = endPos.y() - startPos.y();
-  if(std::abs(dx) > 250 || std::abs(dy) > 200) {
-
-    if(std::abs(dx) < std::abs(dy)) {
-
-      if(dy < 0) { // upward
-        Params().remove("CalibrationParams");
-        Params().remove("LiveParameters");
-        QTimer::singleShot(1500, []() {
-          Params().putBool("SoftRestartTriggered", true);
-        });
-
-        QSound::play("../assets/sounds/reset_calibration.wav");
-      }
-      else { // downward
-        QTimer::singleShot(500, []() {
-          Params().putBool("SoftRestartTriggered", true);
-        });
-      }
+  QRect rc = rect();
+  if(isMapVisible()) {
+    UIState *s = uiState();
+    if(!s->scene.map_on_left)
+      rc.setWidth(rc.width() - (topWidget(this)->width() / 2));
+    else {
+      rc.setWidth(rc.width() - (topWidget(this)->width() / 2));
+      rc.setX((topWidget(this)->width() / 2));
     }
-    else if(std::abs(dx) > std::abs(dy)) {
-      if(dx < 0) { // right to left
-        if(recorder)
-          recorder->toggle();
+  }
+  if(rc.contains(e->pos())) {
+    QPoint endPos = e->pos();
+    int dx = endPos.x() - startPos.x();
+    int dy = endPos.y() - startPos.y();
+    if(std::abs(dx) > 250 || std::abs(dy) > 200) {
+
+      if(std::abs(dx) < std::abs(dy)) {
+
+        if(dy < 0) { // upward
+          Params().remove("CalibrationParams");
+          Params().remove("LiveParameters");
+          QTimer::singleShot(1500, []() {
+            Params().putBool("SoftRestartTriggered", true);
+          });
+
+          QSound::play("../assets/sounds/reset_calibration.wav");
+        }
+        else { // downward
+          QTimer::singleShot(500, []() {
+            Params().putBool("SoftRestartTriggered", true);
+          });
+        }
       }
-      else { // left to right
-        if(recorder)
-          recorder->toggle();
+      else if(std::abs(dx) > std::abs(dy)) {
+        if(dx < 0) { // right to left
+          if(recorder)
+            recorder->toggle();
+        }
+        else { // left to right
+          if(recorder)
+            recorder->toggle();
+        }
       }
+
+      return;
     }
 
-    return;
+    if (map != nullptr) {
+      bool sidebarVisible = geometry().x() > 0;
+      map->setVisible(!sidebarVisible && !map->isVisible());
+    }
   }
 
-  if (map != nullptr) {
-    bool sidebarVisible = geometry().x() > 0;
-    map->setVisible(!sidebarVisible && !map->isVisible());
-  }
   // propagation event to parent(HomeWindow)
   QWidget::mouseReleaseEvent(e);
 }
 
 void OnroadWindow::mousePressEvent(QMouseEvent* e) {
-  startPos = e->pos();
-  //QWidget::mousePressEvent(e);
+
+  QRect rc = rect();
+  if(isMapVisible()) {
+    UIState *s = uiState();
+    if(!s->scene.map_on_left)
+      rc.setWidth(rc.width() - (topWidget(this)->width() / 2));
+    else {
+      rc.setWidth(rc.width() - (topWidget(this)->width() / 2));
+      rc.setX((topWidget(this)->width() / 2));
+    }
+  }
+
+  printf("%d, %d, %d, %d\n", rc.x(), rc.y(), rc.width(), rc.height());
+  if(rc.contains(e->pos())) {
+    startPos = e->pos();
+  }
+
+  QWidget::mousePressEvent(e);
 }
 
 void OnroadWindow::offroadTransition(bool offroad) {
