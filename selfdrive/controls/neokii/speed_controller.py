@@ -388,7 +388,11 @@ class SpeedController:
       radar_dist = lead_radar.dRel if lead_radar.status and lead_radar.radar else 0
       vision_dist = lead_model.x[0] - RADAR_TO_CAMERA if lead_model.prob > .5 else 0
 
-      debug_text += "Lead: {:.1f}/{:.1f}/{:.1f}".format(radar_dist, vision_dist, (radar_dist - vision_dist))
+      debug_text += "Lead: {:.1f}/{:.1f}/{:.1f}\n".format(radar_dist, vision_dist, (radar_dist - vision_dist))
+
+      md = c.sm['modelV2']
+      debug_text += "Lane: {:.2f}/{:.2f}, {:.2f}/{:.2f}".format(md.laneLineProbs[1], md.laneLineProbs[2],
+                                                                md.laneLineStds[1], md.laneLineStds[2])
 
       CC.debugText = debug_text
 

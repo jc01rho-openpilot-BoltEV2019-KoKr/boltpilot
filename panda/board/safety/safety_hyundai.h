@@ -4,9 +4,9 @@
   .max_steer = (steer), \
   .max_rate_up = (rate_up), \
   .max_rate_down = (rate_down), \
-  .max_rt_delta = 120, \
+  .max_rt_delta = 200, \
   .max_rt_interval = 250000, \
-  .driver_torque_allowance = 50, \
+  .driver_torque_allowance = 70, \
   .driver_torque_factor = 2, \
   .type = TorqueDriverLimited, \
    /* the EPS faults when the steering angle is above a certain threshold for too long. to prevent this, */ \
@@ -17,7 +17,7 @@
   .has_steer_req_tolerance = true, \
 }
 
-const SteeringLimits HYUNDAI_STEERING_LIMITS = HYUNDAI_LIMITS(409, 3, 7);
+const SteeringLimits HYUNDAI_STEERING_LIMITS = HYUNDAI_LIMITS(409, 10, 10);
 const SteeringLimits HYUNDAI_STEERING_LIMITS_ALT = HYUNDAI_LIMITS(270, 2, 3);
 
 const LongitudinalLimits HYUNDAI_LONG_LIMITS = {
@@ -27,8 +27,7 @@ const LongitudinalLimits HYUNDAI_LONG_LIMITS = {
 
 const CanMsg HYUNDAI_TX_MSGS[] = {
   {593, 2, 8},                              // MDPS12, Bus 2
-  {790, 1, 8},                              // EMS11, Bus 1
-  {832, 0, 8}, {832, 1, 8},                 // LKAS11, Bus 0, 1
+  {832, 0, 8},                              // LKAS11, Bus 0
   {1056, 0, 8},                             // SCC11, Bus 0
   {1057, 0, 8},                             // SCC12, Bus 0
   {1290, 0, 8},                             // SCC13, Bus 0
@@ -37,14 +36,13 @@ const CanMsg HYUNDAI_TX_MSGS[] = {
   {1155, 0, 8},                             // FCA12 Bus 0
   {1157, 0, 4},                             // LFAHDA_MFC, Bus 0
   {1186, 0, 8},                             // FRT_RADAR11, Bus 0
-  {1265, 0, 4}, {1265, 1, 4}, {1265, 2, 4}, // CLU11, Bus 0, 1, 2
+  {1265, 0, 4}, {1265, 2, 4},               // CLU11, Bus 0, 2
 };
 
 const CanMsg HYUNDAI_LONG_TX_MSGS[] = {
   {593, 2, 8},  // MDPS12, Bus 2
-  {790, 1, 8},  // EMS11, Bus 1
   {832, 0, 8},  // LKAS11 Bus 0
-  {1265, 0, 4}, {1265, 1, 4}, {1265, 2, 4}, // CLU11, Bus 0, 1, 2
+  {1265, 0, 4}, {1265, 2, 4},               // CLU11, Bus 0, 2
   {1157, 0, 4}, // LFAHDA_MFC Bus 0
   {1056, 0, 8}, // SCC11 Bus 0
   {1057, 0, 8}, // SCC12 Bus 0
@@ -58,8 +56,7 @@ const CanMsg HYUNDAI_LONG_TX_MSGS[] = {
 
 const CanMsg HYUNDAI_CAMERA_SCC_TX_MSGS[] = {
   {593, 2, 8},                              // MDPS12, Bus 2
-  {790, 1, 8},                              // EMS11, Bus 1
-  {832, 0, 8},                               // LKAS11, Bus 0
+  {832, 0, 8},                              // LKAS11, Bus 0
   {1056, 0, 8},                             // SCC11, Bus 0
   {1057, 0, 8},                             // SCC12, Bus 0
   {1290, 0, 8},                             // SCC13, Bus 0
@@ -68,7 +65,7 @@ const CanMsg HYUNDAI_CAMERA_SCC_TX_MSGS[] = {
   {1155, 0, 8},                             // FCA12 Bus 0
   {1157, 0, 4},                             // LFAHDA_MFC, Bus 0
   {1186, 0, 8},                             // FRT_RADAR11, Bus 0
-  {1265, 0, 4}, {1265, 1, 4}, {1265, 2, 4}, // CLU11, Bus 0, 1, 2
+  {1265, 0, 4}, {1265, 2, 4},               // CLU11, Bus 0, 2
  };
 
 AddrCheckStruct hyundai_addr_checks[] = {
@@ -204,7 +201,7 @@ static int hyundai_rx_hook(CANPacket_t *to_push) {
 
   if (valid && (addr == 1056)) { //  MainMode_ACC
     // 1 bits: 0
-    int cruise_available = (GET_BYTES_04(to_push)) & 0x1U;
+    int cruise_available = GET_BIT(to_push, 0U);
     hyundai_common_cruise_state_check(cruise_available);
   }
 
