@@ -356,10 +356,11 @@ struct CarControl {
   autoTrGap @19 :UInt32;
   steerRatio @20 :Float32;
   steerActuatorDelay @21 :Float32;
-  sccBus @22 :UInt8;
+  pathCost @22 :Float32;
+  sccBus @23 :UInt8;
 
-  applyAccel @23 :Float32;
-  debugText @24 :Text;
+  applyAccel @24 :Float32;
+  debugText @25 :Text;
 
   struct Actuators {
     # range from 0.0 - 1.0

@@ -366,6 +366,7 @@ class SpeedController:
     CC.sccBus = c.CP.sccBus
     CC.steerRatio = c.VM.sR
     CC.steerActuatorDelay = ntune_common_get('steerActuatorDelay')
+    CC.pathCost = ntune_common_get('pathCost')
 
     if self.show_debug_message:
       actuators = c.last_actuators
