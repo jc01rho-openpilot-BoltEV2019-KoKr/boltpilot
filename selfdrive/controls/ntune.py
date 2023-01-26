@@ -174,9 +174,6 @@ class nTune():
     if self.checkValue("pathOffset", -1.0, 1.0, 0.0):
       updated = True
 
-    if self.checkValue("pathCost", 0.9, 1.5, 1.0):
-      updated = True
-
     return updated
 
   def checkValidIndi(self):
@@ -198,9 +195,9 @@ class nTune():
 
     if self.checkValue("useSteeringAngle", 0., 1., 1.):
       updated = True
-    if self.checkValue("latAccelFactor", 0.5, 4.5, 2.5):
+    if self.checkValue("latAccelFactor", 0.5, 4.5, 2.7):
       updated = True
-    if self.checkValue("friction", 0.0, 0.2, 0.01):
+    if self.checkValue("friction", 0.0, 0.2, 0.08):
       updated = True
     if self.checkValue("angle_deadzone_v2", 0.0, 2.0, 0.0):
       updated = True

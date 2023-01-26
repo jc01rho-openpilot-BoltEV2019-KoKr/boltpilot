@@ -581,7 +581,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p, const cereal::ModelDataV2::Read
   const auto torque_state = controls_state.getLateralControlState().getTorqueState();
 
   QString infoText;
-  infoText.sprintf("TP(%.2f/%.2f) LTP(%.2f/%.2f/%.0f) AO(%.2f/%.2f) SR(%.2f) SAD(%.2f) PC(%.1f) SCC(%d)",
+  infoText.sprintf("TP(%.2f/%.2f) LTP(%.2f/%.2f/%.0f) AO(%.2f/%.2f) SR(%.2f) SAD(%.2f) SCC(%d)",
 
                       torque_state.getLatAccelFactor(),
                       torque_state.getFriction(),
@@ -595,7 +595,6 @@ void AnnotatedCameraWidget::drawHud(QPainter &p, const cereal::ModelDataV2::Read
 
                       car_control.getSteerRatio(),
                       car_control.getSteerActuatorDelay(),
-                      car_control.getPathCost(),
 
                       car_control.getSccBus()
                       );

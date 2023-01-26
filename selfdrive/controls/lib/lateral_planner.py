@@ -67,22 +67,29 @@ class LateralPlanner:
       self.plan_yaw = np.array(md.orientation.z)
       self.plan_yaw_rate = np.array(md.orientationRate.z)
 
-    # Lane change logic
-    desire_state = md.meta.desireState
-    if len(desire_state):
-      self.l_lane_change_prob = desire_state[log.LateralPlan.Desire.laneChangeLeft]
-      self.r_lane_change_prob = desire_state[log.LateralPlan.Desire.laneChangeRight]
-    lane_change_prob = self.l_lane_change_prob + self.r_lane_change_prob
-    self.DH.update(sm['carState'], sm['carControl'].latActive, lane_change_prob)
-
     if self.use_lanelines:
+      lane_change_prob = self.LP.l_lane_change_prob + self.LP.r_lane_change_prob
+      self.DH.update(sm['carState'], sm['carControl'].latActive, lane_change_prob)
+
+      # Turn off lanes during lane change
+      if self.DH.desire == log.LateralPlan.Desire.laneChangeRight or self.DH.desire == log.LateralPlan.Desire.laneChangeLeft:
+        self.LP.lll_prob *= self.DH.lane_change_ll_prob
+        self.LP.rll_prob *= self.DH.lane_change_ll_prob
+
       d_path_xyz = self.LP.get_d_path(self.v_ego, self.t_idxs, self.path_xyz)
     else:
+      desire_state = md.meta.desireState
+      if len(desire_state):
+        self.l_lane_change_prob = desire_state[log.LateralPlan.Desire.laneChangeLeft]
+        self.r_lane_change_prob = desire_state[log.LateralPlan.Desire.laneChangeRight]
+      lane_change_prob = self.l_lane_change_prob + self.r_lane_change_prob
+      self.DH.update(sm['carState'], sm['carControl'].latActive, lane_change_prob)
+
       d_path_xyz = self.path_xyz
 
     d_path_xyz[:, 1] += ntune_common_get('pathOffset')
 
-    self.lat_mpc.set_weights(interp(self.v_ego, [2., 10.], [PATH_COST, PATH_COST * ntune_common_get('pathCost')]),
+    self.lat_mpc.set_weights(PATH_COST,
                              LATERAL_MOTION_COST,
                              LATERAL_ACCEL_COST, LATERAL_JERK_COST,
                              interp(self.v_ego, [2., 10.], [STEERING_RATE_COST, STEERING_RATE_COST/3.]))
