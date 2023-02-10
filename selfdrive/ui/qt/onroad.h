@@ -69,6 +69,10 @@ protected:
   inline QColor blackColor(int alpha = 255) { return QColor(0, 0, 0, alpha); }
 
   ExperimentalButton *experimental_btn;
+  bool dmActive = false;
+  bool hideDM = false;
+  QPixmap dm_img;
+  float dm_fade_state = 1.0;
 
   double prev_draw_t = 0;
   FirstOrderFilter fps_filter;
@@ -110,6 +114,7 @@ protected:
   void drawTurnSignals(QPainter &p);
   void drawGpsStatus(QPainter &p);
   void drawDebugText(QPainter &p);
+  void drawDriverState(QPainter &painter, const UIState *s);
   void drawHud(QPainter &p, const cereal::ModelDataV2::Reader &model);
 
 };
