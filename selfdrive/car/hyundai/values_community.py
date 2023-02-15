@@ -134,7 +134,6 @@ FEATURES = {
 
   # these cars use the FCA11 message for the AEB and FCW signals, all others use SCC12
   "use_fca": {CAR.ELANTRA_GT_I30, CAR.GENESIS_G90_2019, CAR.MOHAVE, CAR.K9},
-  "send_lfa_mfa": {CAR.GENESIS_G90_2019, CAR.GRANDEUR_IG_FL, CAR.GRANDEUR_IG_FL_HEV, CAR.MOHAVE, CAR.K9, CAR.K5_HEV_2022},
   "send_mdps12": {CAR.GENESIS_G90_2019, CAR.K9},
 }
 

@@ -325,8 +325,8 @@ AnnotatedCameraWidget::AnnotatedCameraWidget(VisionStreamType type, QWidget* par
   main_layout->setMargin(bdr_s);
   main_layout->setSpacing(0);
 
-  experimental_btn = new ExperimentalButton(this);
-  main_layout->addWidget(experimental_btn, 0, Qt::AlignTop | Qt::AlignRight);
+  //experimental_btn = new ExperimentalButton(this);
+  //main_layout->addWidget(experimental_btn, 0, Qt::AlignTop | Qt::AlignRight);
 
   dm_img = loadPixmap("../assets/img_driver_face.png", {img_size + 5, img_size + 5});
 
@@ -356,7 +356,7 @@ void AnnotatedCameraWidget::initializeGL() {
 void AnnotatedCameraWidget::updateState(const UIState &s) {
   const SubMaster &sm = *(s.sm);
 
-  experimental_btn->updateState(s);
+  //experimental_btn->updateState(s);
 
   const auto cs = sm["controlsState"].getControlsState();
 

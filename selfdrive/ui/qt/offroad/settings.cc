@@ -552,12 +552,12 @@ CommunityPanel::CommunityPanel(SettingsWindow *parent) : ListWidget(parent) {
       "../assets/offroad/icon_road.png",
     },
 
-    {
+    /*{
       "CruiseStateControl",
       tr("Openpilot controls Cruise State (Experimental)"),
       tr("Openpilot controls cruise on/off, gap and set speed."),
       "../assets/offroad/icon_road.png",
-    },
+    },*/
     {
       "IsLdwsCar",
       tr("LDWS only"),
@@ -598,9 +598,6 @@ void CommunityPanel::showEvent(QShowEvent *event) {
 }
 
 void CommunityPanel::updateToggles() {
-  //auto op_control = toggles["CruiseStateControl"];
-  //op_control->setEnabled(params.getBool("SccOnBus2"));
-  //op_control->refresh();
 }
 
 SelectCar::SelectCar(QWidget* parent): QWidget(parent) {
