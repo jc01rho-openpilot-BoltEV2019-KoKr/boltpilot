@@ -1,13 +1,3 @@
-**This repository is for Hyundai/Kia/Genesis.**
-
-
-It is open source and inherits MIT license.  By installing this software you accept all responsibility for anything that might occur while you use it.  All contributors to this repository are not liable.  <b>Use at your own risk.</b>
-
----
-#
-
-
-
 ![](https://i.imgur.com/b0ZyIx5.jpg)
 
 Table of Contents

@@ -131,9 +131,6 @@ FEATURES = {
   "use_cluster_gears": {CAR.ELANTRA_GT_I30, CAR.GRANDEUR_IG, CAR.K7},
   "use_tcu_gears": {CAR.K5},
   "use_elect_gears": {CAR.GRANDEUR_IG_HEV, CAR.GRANDEUR_IG_FL_HEV, CAR.K5_HEV, CAR.K5_HEV_2022, CAR.K7_HEV},
-
-  # these cars use the FCA11 message for the AEB and FCW signals, all others use SCC12
-  "use_fca": {CAR.ELANTRA_GT_I30, CAR.GENESIS_G90_2019, CAR.MOHAVE, CAR.K9},
   "send_mdps12": {CAR.GENESIS_G90_2019, CAR.K9},
 }
 

@@ -117,7 +117,6 @@ void Replay::seekTo(double seconds, bool relative) {
     emit seekedTo(seconds);
     return isSegmentMerged(seg);
   });
-  emit seekedTo(seconds);
   queueSegment();
 }
 
