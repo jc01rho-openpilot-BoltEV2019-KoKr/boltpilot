@@ -3,6 +3,7 @@ from cereal import car
 from common.numpy_fast import interp
 from panda import Panda
 from common.conversions import Conversions as CV
+from selfdrive.car.hyundai.hyundaicanfd import get_e_can_bus
 from selfdrive.car.hyundai import interface_community
 from selfdrive.car.hyundai.values import HyundaiFlags, CAR, DBC, CANFD_CAR, CAMERA_SCC_CAR, CANFD_RADAR_SCC_CAR, EV_CAR, \
   HYBRID_CAR, LEGACY_SAFETY_MODE_CAR, Buttons, CarControllerParams
@@ -274,8 +275,7 @@ class CarInterface(CarInterfaceBase):
 
     # *** feature detection ***
     if candidate in CANFD_CAR:
-      bus = 5 if ret.flags & HyundaiFlags.CANFD_HDA2 else 4
-      ret.enableBsm = 0x1e5 in fingerprint[bus]
+      ret.enableBsm = 0x1e5 in fingerprint[get_e_can_bus(ret)]
     else:
       ret.enableBsm = 0x58b in fingerprint[0]
 

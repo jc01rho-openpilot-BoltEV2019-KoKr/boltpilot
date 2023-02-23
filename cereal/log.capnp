@@ -843,6 +843,7 @@ struct ModelDataV2 {
   # Model perceived motion
   temporalPose @21 :Pose;
 
+
   struct LeadDataV2 {
     prob @0 :Float32; # probability that car is your lead at time t
     t @1 :Float32;
@@ -1000,7 +1001,6 @@ struct LongitudinalPlan @0xe00b5b3eba12876c {
     y @1 :List(Float32);
   }
 }
-
 struct UiPlan {
   position @0 :XYZTData;
 }
