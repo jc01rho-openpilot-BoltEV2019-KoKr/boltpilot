@@ -29,7 +29,7 @@ def create_acc_commands(packer, enabled, accel, upper_jerk, idx, lead_visible,
   values["TauGapSet"] = CS.out.cruiseState.gapAdjust
   values["VSetDis"] = set_speed if cruise_enabled else 0
   values["AliveCounterACC"] = idx % 0x10
-  values["ObjValid"] = 1 # close lead makes controls tighter
+  values["ObjValid"] = lead_visible
 
   if CruiseStateManager.instance().cruise_state_control:
     values["DriverAlertDisplay"] = 0
