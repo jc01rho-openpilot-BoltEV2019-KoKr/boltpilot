@@ -1,6 +1,5 @@
 from common.numpy_fast import clip
 from selfdrive.car.hyundai.values import HyundaiFlags
-from selfdrive.controls.neokii.cruise_state_manager import CruiseStateManager
 
 def get_e_can_bus(CP):
   # On the CAN-FD platforms, the LKAS camera is on both A-CAN and E-CAN. HDA2 cars
@@ -65,7 +64,7 @@ def create_lfahda_cluster(packer, CP, enabled):
   return packer.make_can_msg("LFAHDA_CLUSTER", get_e_can_bus(CP), values)
 
 
-def create_acc_control(packer, CP, enabled, accel_last, accel, stopping, gas_override, set_speed, CS):
+def create_acc_control(packer, CP, enabled, accel_last, accel, stopping, gas_override, set_speed):
   jerk = 5
   jn = jerk / 50
   if not enabled or gas_override:
@@ -74,16 +73,14 @@ def create_acc_control(packer, CP, enabled, accel_last, accel, stopping, gas_ove
     a_raw = accel
     a_val = clip(accel, accel_last - jn, accel_last + jn)
 
-  cruise_enabled = enabled and CS.out.cruiseState.enabled
-
   values = {
-    "ACCMode": 0 if not cruise_enabled else (2 if gas_override else 1),
-    "MainMode_ACC": enabled,
-    "StopReq": 1 if cruise_enabled and stopping else 0,
+    "ACCMode": 0 if not enabled else (2 if gas_override else 1),
+    "MainMode_ACC": 1,
+    "StopReq": 1 if stopping else 0,
     "aReqValue": a_val,
     "aReqRaw": a_raw,
-    "VSetDis": set_speed if cruise_enabled else 0,
-    "JerkLowerLimit": jerk if cruise_enabled else 1,
+    "VSetDis": set_speed,
+    "JerkLowerLimit": jerk if enabled else 1,
     "JerkUpperLimit": 3.0,
 
     "ACC_ObjDist": 1,
@@ -92,7 +89,7 @@ def create_acc_control(packer, CP, enabled, accel_last, accel, stopping, gas_ove
     "SET_ME_2": 0x4,
     "SET_ME_3": 0x3,
     "SET_ME_TMP_64": 0x64,
-    "DISTANCE_SETTING": CruiseStateManager.instance().gapAdjust,
+    "DISTANCE_SETTING": 4,
   }
 
   return packer.make_can_msg("SCC_CONTROL", get_e_can_bus(CP), values)
