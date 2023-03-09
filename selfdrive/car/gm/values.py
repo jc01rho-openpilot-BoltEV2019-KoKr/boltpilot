@@ -46,7 +46,7 @@ STEER_THRESHOLD = 1.0
 
 class CAR:
   BOLT_EV = "CHEVROLET BOLT EV"
-
+  BOLT_EUV = "CHEVROLET BOLT EUV 2022"
 
 class CruiseButtons:
   INIT = 0
