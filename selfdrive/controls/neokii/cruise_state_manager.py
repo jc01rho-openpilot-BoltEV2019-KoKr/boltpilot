@@ -14,7 +14,8 @@ V_CRUISE_DELTA_KM = 10
 ButtonType = car.CarState.ButtonEvent.Type
 
 def is_radar_disabler(CP):
-  return CP.carFingerprint in CANFD_CAR or (CP.openpilotLongitudinalControl and CP.sccBus == 0)
+  return (CP.openpilotLongitudinalControl and CP.carFingerprint in CANFD_CAR) or \
+    (CP.openpilotLongitudinalControl and CP.sccBus == 0)
 
 
 class CruiseStateManager:

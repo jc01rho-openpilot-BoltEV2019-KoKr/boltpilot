@@ -50,6 +50,9 @@ class CarState(CarStateBase):
     self.mdps_error_cnt = 0
     self.cruise_unavail_cnt = 0
 
+    self.lfa_btn = 0
+    self.lfa_enabled = False
+
   def update(self, cp, cp_cam):
     if self.CP.carFingerprint in CANFD_CAR:
       return self.update_canfd(cp, cp_cam)
@@ -296,6 +299,13 @@ class CarState(CarStateBase):
 
     # ------------------------------------------------------------------------
     # custom messages
+
+    prev_lfa_btn = self.lfa_btn
+    self.lfa_btn = cp.vl[cruise_btn_msg]["LFA_BTN"]
+    if prev_lfa_btn != 1 and self.lfa_btn == 1:
+      self.lfa_enabled = not self.lfa_enabled
+
+    ret.cruiseState.available = self.lfa_enabled
 
     # TODO BrakeLights, TPMS, AutoHold
     ret.brakeLights = ret.brakePressed
@@ -608,6 +618,7 @@ class CarState(CarStateBase):
       ("CRUISE_BUTTONS", cruise_btn_msg),
       ("ADAPTIVE_CRUISE_MAIN_BTN", cruise_btn_msg),
       ("DISTANCE_UNIT", "CRUISE_BUTTONS_ALT"),
+      ("LFA_BTN", cruise_btn_msg),
 
       ("LEFT_LAMP", "BLINKERS"),
       ("RIGHT_LAMP", "BLINKERS"),
