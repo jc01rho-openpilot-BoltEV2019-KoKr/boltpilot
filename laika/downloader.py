@@ -479,5 +479,5 @@ def download_cors_station(time, station_name, cache_dir):
     filepath = download_and_cache_file(url_bases, folder_path, cache_dir+'cors_obs/', filename, compression='.gz')
     return filepath
   except DownloadFailed:
-    logging.exception("File not downloaded, check availability on server.")
+    logging.warning("File not downloaded, check availability on server.")
     return None
