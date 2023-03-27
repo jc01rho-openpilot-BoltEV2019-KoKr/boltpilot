@@ -196,8 +196,8 @@ DevicePanel::DevicePanel(SettingsWindow *parent) : ListWidget(parent) {
   reset_layout->addWidget(restart_openpilot_btn);
   QObject::connect(restart_openpilot_btn, &QPushButton::released, [=]() {
     emit closeSettings();
-    QTimer::singleShot(1000, []() {
-      Params().putBool("SoftRestartTriggered", true);
+    QTimer::singleShot(100, []() {
+      Hardware::soft_reboot();
     });
   });
 
@@ -210,8 +210,8 @@ DevicePanel::DevicePanel(SettingsWindow *parent) : ListWidget(parent) {
       Params().remove("CalibrationParams");
       Params().remove("LiveParameters");
       emit closeSettings();
-      QTimer::singleShot(1000, []() {
-        Params().putBool("SoftRestartTriggered", true);
+      QTimer::singleShot(100, []() {
+        Hardware::soft_reboot();
       });
     }
   });

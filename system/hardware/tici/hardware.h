@@ -67,4 +67,8 @@ public:
 
   static bool get_ssh_enabled() { return Params().getBool("SshEnabled"); };
   static void set_ssh_enabled(bool enabled) { Params().putBool("SshEnabled", enabled); };
+
+  static void soft_reboot() {
+    std::system("tmux new -d -s tmp;\ntmux split-window -v -t tmp;\ntmux send-keys -t tmp.0 \"/data/openpilot/launch_openpilot.sh\" ENTER\ntmux send-keys -t tmp.1 \"tmux kill-session -t comma\" ENTER\ntmux send-keys -t tmp.1 \"tmux rename-session -t tmp comma\" ENTER\ntmux send-keys -t tmp.1 \"exit\" ENTER");
+  };
 };

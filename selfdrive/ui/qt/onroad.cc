@@ -13,6 +13,8 @@
 #include "selfdrive/ui/qt/maps/map_helpers.h"
 #endif
 
+#include "system/hardware/hw.h"
+
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   QVBoxLayout *main_layout  = new QVBoxLayout(this);
   main_layout->setMargin(bdr_s);
@@ -125,14 +127,14 @@ void OnroadWindow::mouseReleaseEvent(QMouseEvent* e) {
           Params().remove("CalibrationParams");
           Params().remove("LiveParameters");
           QTimer::singleShot(1500, []() {
-            Params().putBool("SoftRestartTriggered", true);
+            Hardware::soft_reboot();
           });
 
           QSound::play("../assets/sounds/reset_calibration.wav");
         }
         else { // downward
           QTimer::singleShot(500, []() {
-            Params().putBool("SoftRestartTriggered", true);
+            Hardware::soft_reboot();
           });
         }
       }
