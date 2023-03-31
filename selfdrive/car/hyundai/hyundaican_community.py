@@ -22,6 +22,13 @@ def create_acc_commands(packer, enabled, accel, upper_jerk, idx, lead_visible,
                         set_speed, stopping, long_override, CS, stock_cam):
   commands = []
 
+  if CS.out.stockFcw or CS.out.stockAeb:
+    commands.append(packer.make_can_msg("SCC11", 0, CS.scc11))
+    commands.append(packer.make_can_msg("SCC12", 0, CS.scc12))
+    if CS.scc14 is not None:
+      commands.append(packer.make_can_msg("SCC14", 0, CS.scc14))
+    return commands
+
   cruise_enabled = enabled and CS.out.cruiseState.enabled
 
   values = CS.scc11

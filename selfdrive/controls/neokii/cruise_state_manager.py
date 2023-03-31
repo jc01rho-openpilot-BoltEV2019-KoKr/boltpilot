@@ -95,13 +95,12 @@ class CruiseStateManager:
     self.prev_brake_pressed = CS.brakePressed
 
     CS.cruiseState.available = self.available
-    CS.cruiseState.gapAdjust = self.gapAdjust
 
     if cruise_state_control:
       CS.cruiseState.enabled = self.enabled
       CS.cruiseState.standstill = False
       CS.cruiseState.speed = self.speed
-      #CS.cruiseState.gapAdjust = self.gapAdjust
+      CS.cruiseState.gapAdjust = self.gapAdjust
 
   def update_buttons(self):
     if self.button_events is None:
