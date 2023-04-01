@@ -174,6 +174,9 @@ class nTune():
     if self.checkValue("pathOffset", -1.0, 1.0, 0.0):
       updated = True
 
+    if self.checkValue("pathFactor", 0.8, 1.1, 1.0):
+      updated = True
+
     return updated
 
   def checkValidIndi(self):
