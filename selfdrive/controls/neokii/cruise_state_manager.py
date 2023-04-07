@@ -54,7 +54,7 @@ class CruiseStateManager:
     self.prev_brake_pressed = False
 
     self.is_metric = Params().get_bool('IsMetric')
-    self.cruise_state_control = False #Params().get_bool('CruiseStateControl')
+    self.cruise_state_control = Params().get_bool('CruiseStateControl')
 
   def is_resume_spam_allowed(self, CP):
     if is_radar_disabler(CP):

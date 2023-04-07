@@ -208,7 +208,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"SelectedCar", PERSISTENT},
     {"UseLanelines", PERSISTENT},
     {"SccOnBus2", PERSISTENT},
-    //{"CruiseStateControl", PERSISTENT},
+    {"CruiseStateControl", PERSISTENT},
     {"SccGapAdjust", PERSISTENT},
 
     {"IsLdwsCar", PERSISTENT},
