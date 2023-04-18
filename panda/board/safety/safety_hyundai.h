@@ -258,6 +258,7 @@ static int hyundai_rx_hook(CANPacket_t *to_push) {
 uint32_t last_ts_lkas11_from_op = 0;
 uint32_t last_ts_scc12_from_op = 0;
 uint32_t last_ts_mdps12_from_op = 0;
+uint32_t last_ts_fca11_from_op = 0;
 
 static int hyundai_tx_hook(CANPacket_t *to_send) {
 
@@ -328,27 +329,21 @@ static int hyundai_tx_hook(CANPacket_t *to_send) {
     }
   }*/
 
-  //////////////////////////////////////////////////////////
-  if(tx) {
-    bool is_lkas11_msg = addr == 832;
-    bool is_scc12_msg = addr == 1057;
-    bool is_mdps12_msg = addr == 593;
-
-    if(is_lkas11_msg)
-      last_ts_lkas11_from_op = microsecond_timer_get();
-    else if(is_scc12_msg)
-      last_ts_scc12_from_op = microsecond_timer_get();
-    else if(is_mdps12_msg)
-      last_ts_mdps12_from_op = microsecond_timer_get();
-  }
+  if(addr == 832)
+    last_ts_lkas11_from_op = (tx == 0 ? 0 : microsecond_timer_get());
+  else if(addr == 1057)
+    last_ts_scc12_from_op = (tx == 0 ? 0 : microsecond_timer_get());
+  else if(addr == 593)
+    last_ts_mdps12_from_op = (tx == 0 ? 0 : microsecond_timer_get());
+  else if(addr == 909)
+    last_ts_fca11_from_op = (tx == 0 ? 0 : microsecond_timer_get());
 
   return tx;
 }
 
-static int hyundai_fwd_hook(int bus_num, CANPacket_t *to_fwd) {
+static int hyundai_fwd_hook(int bus_num, int addr) {
 
   int bus_fwd = -1;
-  int addr = GET_ADDR(to_fwd);
 
   uint32_t now = microsecond_timer_get();
 
@@ -367,7 +362,7 @@ static int hyundai_fwd_hook(int bus_num, CANPacket_t *to_fwd) {
     bool is_lkas_msg = addr == 832;
     bool is_lfahda_msg = addr == 1157;
     bool is_scc_msg = addr == 1056 || addr == 1057 || addr == 1290 || addr == 905;
-    //bool is_fca_msg = addr == 909 || addr == 1155;
+    bool is_fca_msg = addr == 909 || addr == 1155;
 
     bool block_msg = is_lkas_msg || is_lfahda_msg || is_scc_msg; //|| is_fca_msg;
     if (!block_msg) {
@@ -381,6 +376,10 @@ static int hyundai_fwd_hook(int bus_num, CANPacket_t *to_fwd) {
       }
       else if(is_scc_msg) {
         if(now - last_ts_scc12_from_op >= 400000)
+          bus_fwd = 0;
+      }
+      else if(is_fca_msg) {
+        if(now - last_ts_fca11_from_op >= 400000)
           bus_fwd = 0;
       }
     }

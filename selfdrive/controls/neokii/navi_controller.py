@@ -368,6 +368,11 @@ class SpeedLimiter:
       if cam_type == 22:  # speed bump
         MIN_LIMIT = 10
 
+      apply_limit_speed = 255
+      limit_speed = 0
+      left_dist = 0
+      first_started = False
+
       if cam_limit_speed_left_dist is not None and cam_limit_speed is not None and cam_limit_speed_left_dist > 0:
 
         v_ego = cluster_speed * (CV.KPH_TO_MS if is_metric else CV.MPH_TO_MS)
@@ -397,13 +402,14 @@ class SpeedLimiter:
           else:
             pp = 0
 
-          return cam_limit_speed * camSpeedFactor + int(pp * diff_speed), \
-                 cam_limit_speed, cam_limit_speed_left_dist, first_started, log
+          apply_limit_speed = cam_limit_speed * camSpeedFactor + int(pp * diff_speed)
+          limit_speed = cam_limit_speed
+          left_dist = cam_limit_speed_left_dist
+        else:
+          first_started = False
+          self.slowing_down = False
 
-        self.slowing_down = False
-        return 0, cam_limit_speed, cam_limit_speed_left_dist, False, log
-
-      elif section_left_dist is not None and section_limit_speed is not None and section_left_dist > 0:
+      if section_left_dist is not None and section_limit_speed is not None and section_left_dist > 0:
         if MIN_LIMIT <= section_limit_speed <= MAX_LIMIT:
 
           if not self.slowing_down:
@@ -417,10 +423,17 @@ class SpeedLimiter:
             speed_diff = (section_limit_speed - section_avg_speed) / 2.
             speed_diff *= interp(section_left_dist, [500, 1000], [0., 1.])
 
-          return section_limit_speed * camSpeedFactor + speed_diff, section_limit_speed, section_left_dist, first_started, log
+          apply_limit_speed = min(apply_limit_speed, section_limit_speed * camSpeedFactor + speed_diff)
+          limit_speed = section_limit_speed
+          left_dist = section_left_dist
+        else:
+          first_started = False
+          self.slowing_down = False
 
-        self.slowing_down = False
-        return 0, section_limit_speed, section_left_dist, False, log
+      if apply_limit_speed >= 255:
+        apply_limit_speed = 0
+
+      return apply_limit_speed, limit_speed, left_dist, first_started, log
 
     except Exception as e:
       log = "Ex: " + str(e)

@@ -127,7 +127,7 @@ CHECKSUM = {
   "6B": [],
 }
 
-FEATURES = {
+CAN_GEARS = {
   "use_cluster_gears": {CAR.ELANTRA_GT_I30, CAR.GRANDEUR_IG, CAR.K7},
   "use_tcu_gears": {CAR.K5},
   "use_elect_gears": {CAR.GRANDEUR_IG_HEV, CAR.GRANDEUR_IG_FL_HEV, CAR.K5_HEV, CAR.K5_HEV_2022, CAR.K7_HEV},
