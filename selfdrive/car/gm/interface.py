@@ -151,11 +151,7 @@ class CarInterface(CarInterfaceBase):
       tire_stiffness_factor = 0.469  # Stock Michelin Energy Saver A/S, LiveParameters
       ret.centerToFront = ret.wheelbase * 0.45  # Volt Gen 1, TODO corner weigh
 
-      ret.lateralTuning.pid.kpBP = [0., 40.]
-      ret.lateralTuning.pid.kpV = [0., 0.17]
-      ret.lateralTuning.pid.kiBP = [0., 40.]
-      ret.lateralTuning.pid.kiV = [0., 0.005]
-      ret.lateralTuning.pid.kf = 1.  # get_steer_feedforward_volt()
+      CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
       ret.steerActuatorDelay = 0.2
 
     elif candidate == CAR.MALIBU:
@@ -177,7 +173,7 @@ class CarInterface(CarInterfaceBase):
       ret.wheelbase = 2.86
       ret.steerRatio = 14.4  # end to end is 13.46
       ret.centerToFront = ret.wheelbase * 0.4
-      ret.lateralTuning.pid.kf = 1.  # get_steer_feedforward_acadia()
+      CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
 
     elif candidate == CAR.BUICK_LACROSSE:
       ret.mass = 1712. + STD_CARGO_KG
