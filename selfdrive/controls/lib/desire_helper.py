@@ -352,7 +352,7 @@ class DesireHelper:
               elif roadedge_detected:
                 self.desireEvent = EventName.laneChangeRoadEdge
               else:
-                if leftBlinker and v_ego_kph < self.autoLaneChangeSpeed: # 저속에 좌측차로변경 토크필요
+                if leftBlinker and ( v_ego_kph < self.autoLaneChangeSpeed or self.autoLaneChangeSpeed < 1 ) : # 저속에 좌측차로변경 토크필요
                   need_torque = 2
                 self.lane_change_state = LaneChangeState.laneChangeStarting
             else: # 네비..

@@ -1,13 +1,19 @@
 
 
 # For foreign users (non Korean.)
-#### working tested : BoltEV premier 2017, 2018, 2019, 2020
+#### working tested : BoltEV premier 2017, 2018, 2019, 2020  (also works if using imperal units)
 thx for @andyroo-t that BoltEV premier 2020 tests 
+
+### 2023-08-09 (release/develop)
+- settings->ETC->EnableMainCruiseOnOff is added. and this is highly recommended to ON. 
+  - please turn this on if you read first time.
+  - (you can enable/disable cruise control by pressing the "SET" button on the steering wheel.)
+
 ### 2023-07-18 (release/develop)
 - feature-develop branch is synced with latest feature/opgm-ap-integration
 - base fork chaged to Apilot
 - engaging method has changed. 
-- now, you can engage by pressing the "SET" button on the steering wheel.
+  - now, you can engage by pressing the "SET" button on the steering wheel.
 - full clean wipe & factory reset the device when you read this first time.
 ### 2022-12-21 (v0819-c3)
 - full clean wipe & factory reset the device when you read this first time.
