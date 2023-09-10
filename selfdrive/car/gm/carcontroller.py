@@ -10,6 +10,7 @@ from openpilot.selfdrive.car.gm.values import DBC, CanBus, CarControllerParams, 
 import math
 import cereal.messaging as messaging
 import numpy as np
+from collections import deque
 
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 NetworkLocation = car.CarParams.NetworkLocation

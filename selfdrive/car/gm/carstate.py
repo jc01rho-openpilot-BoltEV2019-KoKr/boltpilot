@@ -15,6 +15,7 @@ NetworkLocation = car.CarParams.NetworkLocation
 GearShifter = car.CarState.GearShifter
 STANDSTILL_THRESHOLD = 10 * 0.0311 * CV.KPH_TO_MS
 
+CLUSTER_SAMPLE_RATE = 20  # frames for boltpilot
 
 class CarState(CarStateBase):
   def __init__(self, CP):
@@ -45,6 +46,17 @@ class CarState(CarStateBase):
     self.distance_button_pressed = False
 
     self.totalDistance = 0.0
+
+
+
+    ###for neokii integration of former BoltPilot
+    self.params = Params()
+    self.cluster_speed = 0
+    self.cluster_speed_counter = CLUSTER_SAMPLE_RATE
+    self.is_settings_metri = True
+    self.ECMVehicleSpeed = 0
+    ###for neokii integration of former BoltPilot ends
+
 
   def update(self, pt_cp, cam_cp, loopback_cp, chassis_cp): # brakeLights
     ret = car.CarState.new_message()
