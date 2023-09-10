@@ -146,11 +146,12 @@ class VisionTurnController():
     self._lat_acc_overshoot_ahead = False
 
   def _update_params(self):
-    time = time.monotonic()
-    if time > self._last_params_update + 5.0:
+
+    now = time.monotonic()
+    if now > self._last_params_update + 5.0:
       self._is_enabled = int(self._params.get("AutoCurveSpeedCtrl")) == 1
       self.autoCurveSpeedFactor = 1.0 #float(int(Params().get("AutoCurveSpeedFactor", encoding="utf8")))*0.01
-      self._last_params_update = time
+      self._last_params_update = now
 
   def _update_calculations(self, sm):
     # Get path polynomial aproximation for curvature estimation from model data.
