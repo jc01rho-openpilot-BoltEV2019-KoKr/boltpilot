@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
 import os
+import time
 import numpy as np
-
-from common.realtime import sec_since_boot
-from common.numpy_fast import clip, interp
-from system.swaglog import cloudlog
+from cereal import log
+from openpilot.common.numpy_fast import clip, interp
+from openpilot.system.swaglog import cloudlog
 # WARNING: imports outside of constants will not trigger a rebuild
-from selfdrive.modeld.constants import index_function
-from selfdrive.controls.lib.radar_helpers import _LEAD_ACCEL_TAU
-from common.conversions import Conversions as CV
-from common.params import Params
-from common.realtime import DT_MDL
-from common.filter_simple import StreamingMovingAverage
+from openpilot.selfdrive.modeld.constants import index_function
+from openpilot.selfdrive.car.interfaces import ACCEL_MIN
+from openpilot.selfdrive.controls.radard import _LEAD_ACCEL_TAU
+from openpilot.common.conversions import Conversions as CV
+from openpilot.common.params import Params
+from openpilot.common.realtime import DT_MDL
+from openpilot.common.filter_simple import StreamingMovingAverage
 from cereal import log, car
 EventName = car.CarEvent.EventName
 
 XState = log.LongitudinalPlan.XState
 
 if __name__ == '__main__':  # generating code
-  from third_party.acados.acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
+  from openpilot.third_party.acados.acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 else:
-  from selfdrive.controls.lib.longitudinal_mpc_lib.c_generated_code.acados_ocp_solver_pyx import AcadosOcpSolverCython  # pylint: disable=no-name-in-module, import-error
+  from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.c_generated_code.acados_ocp_solver_pyx import AcadosOcpSolverCython
 
 from casadi import SX, vertcat
 
@@ -51,7 +52,6 @@ LIMIT_COST = 1e6
 ACADOS_SOLVER_TYPE = 'SQP_RTI'
 
 
-DIFF_RADAR_VISION = 2.0
 # Fewer timestamps don't hurt performance and lead to
 # much better convergence of the MPC with low iterations
 N = 12
@@ -61,8 +61,6 @@ T_IDXS_LST = [index_function(idx, max_val=MAX_T, max_idx=N) for idx in range(N+1
 T_IDXS = np.array(T_IDXS_LST)
 FCW_IDXS = T_IDXS < 5.0
 T_DIFFS = np.diff(T_IDXS, prepend=[0.])
-MIN_ACCEL = -4.0 #-3.5
-MAX_ACCEL = 2.5
 T_FOLLOW = 1.45
 COMFORT_BRAKE = 2.5
 STOP_DISTANCE = 6.5
@@ -257,7 +255,6 @@ class LongitudinalMpc:
     self.stopDist = 0.0
     self.e2eCruiseCount = 0
     self.mpcEvent = 0
-    self.lightSensor = 0
     self.prev_x = 0
 
     self.t_follow = T_FOLLOW
@@ -273,6 +270,7 @@ class LongitudinalMpc:
     self.source = SOURCES[2]
     self.x_obstacle_min = 0.0
     self.openpilotLongitudinalControl = False
+    self.experimentalMode = False
 
   def reset(self):
     # self.solver = AcadosOcpSolverCython(MODEL_NAME, ACADOS_SOLVER_TYPE, N)
@@ -350,7 +348,7 @@ class LongitudinalMpc:
 
   def set_weights(self, prev_accel_constraint=True, v_lead0=0, v_lead1=0):
     if self.mode == 'acc':
-      a_change_cost = self.AChangeCost if prev_accel_constraint else 0
+      a_change_cost = self.AChangeCost if prev_accel_constraint else 40
       if self.applyLongDynamicCost:
         cost_mulitpliers = self.get_cost_multipliers(v_lead0, v_lead1)
         cost_weights = [self.XEgoObstacleCost, X_EGO_COST, V_EGO_COST, A_EGO_COST, a_change_cost * cost_mulitpliers[0], self.JEgoCost * cost_mulitpliers[1]]
@@ -359,7 +357,7 @@ class LongitudinalMpc:
         cost_weights = [self.XEgoObstacleCost, X_EGO_COST, V_EGO_COST, A_EGO_COST, a_change_cost, self.JEgoCost]
         constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, self.DangerZoneCost]
     elif self.mode == 'blended':
-      a_change_cost = 40.0 if prev_accel_constraint else 0
+      a_change_cost = 40.0 if prev_accel_constraint else 40
       cost_weights = [0., 0.1, 0.2, 5.0, a_change_cost, 1.0]
       constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, 50.0]
     else:
@@ -385,7 +383,6 @@ class LongitudinalMpc:
   def process_lead(self, lead):
     v_ego = self.x0[1]
     if lead is not None and lead.status:
-      #x_lead = lead.dRel if lead.radar else max(lead.dRel-DIFF_RADAR_VISION, 0.)
       x_lead = lead.dRel
       v_lead = lead.vLead
       a_lead = lead.aLeadK
@@ -399,7 +396,7 @@ class LongitudinalMpc:
 
     # MPC will not converge if immediate crash is expected
     # Clip lead distance to what is still possible to brake for
-    min_x_lead = ((v_ego + v_lead)/2) * (v_ego - v_lead) / (-MIN_ACCEL * 2)
+    min_x_lead = ((v_ego + v_lead)/2) * (v_ego - v_lead) / (-ACCEL_MIN * 2)
     x_lead = clip(x_lead, min_x_lead, 1e8)
     v_lead = clip(v_lead, 0.0, 1e8)
     a_lead = clip(a_lead, -10., 5.)
@@ -412,11 +409,9 @@ class LongitudinalMpc:
     self.cruise_min_a = min_a
     self.max_a = max_a
 
-  def update(self, carstate, radarstate, model, controls, v_cruise, x, v, a, j, y, prev_accel_constraint, light_sensor):
+  def update(self, carstate, radarstate, model, controls, v_cruise, x, v, a, j, y, prev_accel_constraint):
 
     self.update_params()
-    if light_sensor >= 0:
-      self.lightSensor = light_sensor
     v_ego = self.x0[1]
     a_ego = carstate.aEgo
 
@@ -441,10 +436,11 @@ class LongitudinalMpc:
     # and then treat that as a stopped car/obstacle at this new distance.
     lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1], self.x_sol[:,1], self.t_follow, self.stopDistance, krkeegan=self.applyLongDynamicCost)
     lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1], self.x_sol[:,1], self.t_follow, self.stopDistance, krkeegan=self.applyLongDynamicCost)
-    self.params[:,0] = MIN_ACCEL
+    self.params[:,0] = ACCEL_MIN
     self.params[:,1] = self.max_a
 
     v_cruise, stop_x, self.mode = self.update_apilot(controls, carstate, radarstate, model, v_cruise, self.mode)
+    self.mode = 'blended' if self.experimentalMode else self.mode
     self.set_weights(prev_accel_constraint=prev_accel_constraint, v_lead0=lead_xv_0[0,1], v_lead1=lead_xv_1[0,1])
 
     # Update in ACC mode or ACC/e2e blend
@@ -467,7 +463,7 @@ class LongitudinalMpc:
 
       #self.debugLongText1 = 'A{:.2f},Y{:.1f},TR={:.2f},state={} {},L{:3.1f} C{:3.1f},{:3.1f},{:3.1f} X{:3.1f} S{:3.1f},V={:.1f}:{:.1f}:{:.1f}'.format(
       #  self.prev_a[0], y[-1], self.t_follow, self.xState, self.e2ePaused, lead_0_obstacle[0], cruise_obstacle[0], cruise_obstacle[1], cruise_obstacle[-1],model.position.x[-1], model_x, v_ego*3.6, v[0]*3.6, v[-1]*3.6)
-      self.debugLongText1 = "L{},A{:3.2f},L0{:5.1f},C{:5.1f},X{:5.1f},S{:5.1f}".format(self.lightSensor, self.max_a, lead_0_obstacle[0], cruise_obstacle[0], x2[0], self.stopDist)
+      self.debugLongText1 = "A{:3.2f},L0{:5.1f},C{:5.1f},X{:5.1f},S{:5.1f}".format(self.max_a, lead_0_obstacle[0], cruise_obstacle[0], x2[0], self.stopDist)
 
       self.source = SOURCES[np.argmin(x_obstacles[0])]
 
@@ -527,7 +523,7 @@ class LongitudinalMpc:
     self.x_obstacle_min = self.params[:,2]
 
   def run(self):
-    # t0 = sec_since_boot()
+    # t0 = time.monotonic()
     # reset = 0
     for i in range(N+1):
       self.solver.set(i, 'p', self.params[i])
@@ -541,7 +537,8 @@ class LongitudinalMpc:
     self.time_integrator = float(self.solver.get_stats('time_sim')[0])
 
     # qp_iter = self.solver.get_stats('statistics')[-1][-1] # SQP_RTI specific
-    # print(f"long_mpc timings: tot {self.solve_time:.2e}, qp {self.time_qp_solution:.2e}, lin {self.time_linearization:.2e}, integrator {self.time_integrator:.2e}, qp_iter {qp_iter}")
+    # print(f"long_mpc timings: tot {self.solve_time:.2e}, qp {self.time_qp_solution:.2e}, lin {self.time_linearization:.2e}, \
+    # integrator {self.time_integrator:.2e}, qp_iter {qp_iter}")
     # res = self.solver.get_residuals()
     # print(f"long_mpc residuals: {res[0]:.2e}, {res[1]:.2e}, {res[2]:.2e}, {res[3]:.2e}")
     # self.solver.print_statistics()
@@ -557,14 +554,15 @@ class LongitudinalMpc:
 
     self.prev_a = np.interp(T_IDXS + 0.05, T_IDXS, self.a_solution)
 
-    t = sec_since_boot()
+    t = time.monotonic()
     if self.solution_status != 0:
       if t > self.last_cloudlog_t + 5.0:
         self.last_cloudlog_t = t
         cloudlog.warning(f"Long mpc reset, solution_status: {self.solution_status}")
       self.reset()
       # reset = 1
-    # print(f"long_mpc timings: total internal {self.solve_time:.2e}, external: {(sec_since_boot() - t0):.2e} qp {self.time_qp_solution:.2e}, lin {self.time_linearization:.2e} qp_iter {qp_iter}, reset {reset}")
+    # print(f"long_mpc timings: total internal {self.solve_time:.2e}, external: {(time.monotonic() - t0):.2e} qp {self.time_qp_solution:.2e}, \
+    # lin {self.time_linearization:.2e} qp_iter {qp_iter}, reset {reset}")
 
 
   def update_params(self):
@@ -653,7 +651,7 @@ class LongitudinalMpc:
     if v_ego_kph < 1.0: 
       stopSign = model_x < 20.0 and model_v < 10.0
     elif v_ego_kph < 80.0:
-      stopSign = model_x < 130.0 and ((model_v < 3.0) or (model_v < v[0]*0.7)) and abs(y[-1]) < 5.0
+      stopSign = model_x < 120.0 and ((model_v < 3.0) or (model_v < v[0]*0.7))  and abs(y[-1]) < 5.0
     else:
       stopSign = False
 
@@ -823,6 +821,8 @@ class LongitudinalMpc:
       if self.status:
         self.xState = XState.lead
         stop_x = 1000.0
+      elif abs(carstate.steeringAngleDeg) > 5:
+        pass
       elif self.trafficState == 1 and not carstate.gasPressed:
         self.xState = XState.e2eStop
         self.mpcEvent = EventName.trafficStopping
@@ -834,8 +834,13 @@ class LongitudinalMpc:
         stop_x = 1000.0
 
     if self.trafficStopMode > 0:
-      #mode = 'blended' if self.xState in [XState.e2eStop, XState.e2eCruisePrepare] else 'acc'
-      mode = 'blended' if self.xState in [XState.e2eCruisePrepare] else 'acc'
+      if self.trafficStopMode == 2:
+        mode = 'blended' if self.xState in [XState.e2eCruisePrepare] else 'acc'
+      else:
+        if self.xState == XState.e2eCruisePrepare or (self.xState == XState.e2eStop and self.stopDist > 40):
+          mode = 'blended'
+        else:
+          mode = 'acc'
 
     self.comfort_brake *= self.mySafeModeFactor
     self.longActiveUser = controls.longActiveUser
@@ -847,7 +852,7 @@ class LongitudinalMpc:
     elif stop_x == 1000.0:
       self.stopDist = 0.0
     elif self.stopDist > 0:
-      stop_dist = v_ego ** 2 / (3.0 * 2) # 3.0m/s^2 으로 감속할경우 필요한 거리.
+      stop_dist = v_ego ** 2 / (1.8 * 2) # 1.8m/s^2 으로 감속할경우 필요한 거리.
       self.stopDist = self.stopDist if self.stopDist > stop_dist else stop_dist
       stop_x = 0.0
 #    else:

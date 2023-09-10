@@ -8,19 +8,20 @@ import traceback
 from multiprocessing import Process
 from typing import List, Tuple, Union
 
+from cereal import log
 import cereal.messaging as messaging
-import selfdrive.sentry as sentry
-from common.basedir import BASEDIR
-from common.params import Params, ParamKeyType
-from common.text_window import TextWindow
-from selfdrive.boardd.set_time import set_time
-from system.hardware import HARDWARE, PC
-from selfdrive.manager.helpers import unblock_stdout, write_onroad_params
-from selfdrive.manager.process import ensure_running, launcher
-from selfdrive.manager.process_config import managed_processes
-from selfdrive.athena.registration import register, UNREGISTERED_DONGLE_ID
-from system.swaglog import cloudlog, add_file_handler
-from system.version import is_dirty, get_commit, get_version, get_origin, get_short_branch, \
+import openpilot.selfdrive.sentry as sentry
+from openpilot.common.basedir import BASEDIR
+from openpilot.common.params import Params, ParamKeyType
+from openpilot.common.text_window import TextWindow
+from openpilot.selfdrive.boardd.set_time import set_time
+from openpilot.system.hardware import HARDWARE, PC
+from openpilot.selfdrive.manager.helpers import unblock_stdout, write_onroad_params
+from openpilot.selfdrive.manager.process import ensure_running, launcher
+from openpilot.selfdrive.manager.process_config import managed_processes
+from openpilot.selfdrive.athena.registration import register, UNREGISTERED_DONGLE_ID
+from openpilot.system.swaglog import cloudlog, add_file_handler
+from openpilot.system.version import is_dirty, get_commit, get_version, get_origin, get_short_branch, \
                            get_normalized_origin, terms_version, training_version, \
                            is_tested_branch, is_release_branch
 
@@ -45,6 +46,7 @@ def manager_init() -> None:
     ("HasAcceptedTerms", "0"),
     ("LanguageSetting", "main_en"),
     ("OpenpilotEnabledToggle", "1"),
+    ("LongitudinalPersonality", str(log.LongitudinalPersonality.standard)),
     ("ShowDebugUI", "0"),
     ("ShowDateTime", "1"),
     ("ShowHudMode", "4"),
@@ -79,12 +81,18 @@ def manager_init() -> None:
     ("AutoCurveSpeedFactor", "100"),
     ("AutoCurveSpeedFactorIn", "10"),
     ("AutoTurnControl", "0"),
-    ("AutoTurnSpeed", "40"),
-    ("AutoTurnTimeMax", "200"),
+    ("AutoTurnControlSpeedLaneChange", "60"),
+    ("AutoTurnControlSpeedTurn", "20"),
+    ("AutoTurnControlTurnEnd", "3"),
     ("AutoLaneChangeSpeed", "30"),
     ("AutoNaviSpeedCtrl", "1"),
+    ("AutoNaviSpeedCtrlMode", "0"),
     ("AutoNaviSpeedCtrlStart", "22"),
     ("AutoNaviSpeedCtrlEnd", "6"),
+    ("AutoNaviSpeedBumpDist", "10"),
+    ("AutoNaviSpeedBumpSpeed", "35"),
+    ("AutoNaviSpeedSafetyFactor", "105"),
+    ("AutoNaviSpeedDecelRate", "40"),
     ("AutoRoadLimitCtrl", "0"),
     ("AutoResumeFromBrakeRelease", "1"),
     ("AutoResumeFromBrakeReleaseDist", "20"),
@@ -105,7 +113,7 @@ def manager_init() -> None:
     ("AutoSpeedAdjustWithLeadCar", "0"),   
     ("TrafficStopAccel", "80"),     
     ("TrafficStopModelSpeed", "0"),         
-    ("TrafficStopMode", "1"),         
+    ("TrafficStopMode", "2"),         
     ("CruiseButtonMode", "0"),      
     ("CruiseSpeedUnit", "10"),      
     ("GapButtonMode", "0"),      
@@ -141,8 +149,8 @@ def manager_init() -> None:
     ("UseLaneLineSpeed", "0"),    
     ("PathOffset", "0"),  
     ("PathCostApply", "100"),
-    ("PathCostApplyLow", "100"),
     ("HapticFeedbackWhenSpeedCamera", "0"),       
+    ("MaxAngleFrames", "89"),       
     ("SoftHoldMode", "1"),       
     ("ApplyModelDistOrder", "32"),       
     ("TrafficStopAdjustRatio", "90"),       
@@ -150,10 +158,6 @@ def manager_init() -> None:
     ("LateralMotionCost", "11"),       
     ("LateralAccelCost", "0"),       
     ("LateralJerkCost", "5"),       
-    ("LateralTorqueKp", "100"),       
-    ("LateralTorqueKi", "10"),       
-    ("LateralTorqueKd", "0"),       
-    ("LateralTorqueKf", "100"),       
     ("LateralTorqueCustom", "0"),       
     ("LateralTorqueAccelFactor", "2500"),       
     ("LateralTorqueFriction", "100"),       
@@ -161,14 +165,10 @@ def manager_init() -> None:
     ("CruiseControlMode", "4"),
     ("CruiseOnDist", "0"),
     ("SteerRatioApply", "0"),
-    ("SteerRatioAccelApply", "0"),
     ("SteerDeltaUp", "3"),       
     ("SteerDeltaDown", "7"),
-
-    #BoltEV
     ("PowerOffTime", "0"),
-    ("PedalPressedThreshold", "20"), 
-    ("EnableMainCruiseOnOff", "0"),
+    ("PedalPressedThreshold", "15"),
   ]
   if not PC:
     default_params.append(("LastUpdateTime", datetime.datetime.utcnow().isoformat().encode('utf8')))
@@ -250,7 +250,7 @@ def manager_cleanup() -> None:
 
 def manager_thread() -> None:
 
-  Process(name="road_speed_limiter", target=launcher, args=("selfdrive.road_speed_limiter", "road_speed_limiter")).start()
+  Process(name="road_speed_limiter", target=launcher, args=("openpilot.selfdrive.road_speed_limiter", "road_speed_limiter")).start()
   cloudlog.bind(daemon="manager")
   cloudlog.info("manager start")
   cloudlog.info({"environ": os.environ})

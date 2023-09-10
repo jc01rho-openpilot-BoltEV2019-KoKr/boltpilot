@@ -1,10 +1,10 @@
 import math
 
 from cereal import log
-from common.numpy_fast import interp
-from selfdrive.controls.lib.latcontrol import LatControl
-from selfdrive.controls.lib.pid import PIDController
-from selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
+from openpilot.common.numpy_fast import interp
+from openpilot.selfdrive.controls.lib.latcontrol import LatControl
+from openpilot.selfdrive.controls.lib.pid import PIDController
+from openpilot.selfdrive.controls.lib.vehicle_model import ACCELERATION_DUE_TO_GRAVITY
 from common.params import Params
 
 # At higher speeds (25+mph) we can assume:
@@ -33,7 +33,7 @@ class LatControlTorque(LatControl):
     self.steering_angle_deadzone_deg = self.torque_params.steeringAngleDeadzoneDeg
     self.paramsCount = 0
 
-    self.lateralTorqueCustom = Params().get_bool("LateralTorqueCustom")
+    self.lateralTorqueCustom = int(Params().get("LateralTorqueCustom", encoding="utf8"))
     self.lateralTorqueAccelFactor = float(int(Params().get("LateralTorqueAccelFactor", encoding="utf8")))*0.001
     self.lateralTorqueFriction = float(int(Params().get("LateralTorqueFriction", encoding="utf8")))*0.001
 
@@ -46,19 +46,11 @@ class LatControlTorque(LatControl):
     self.paramsCount += 1
     if self.paramsCount > 30:
       self.paramsCount = 0
-      lateralTorqueKp = float(int(Params().get("LateralTorqueKp", encoding="utf8")))*0.01
-      lateralTorqueKi = float(int(Params().get("LateralTorqueKi", encoding="utf8")))*0.01
-      lateralTorqueKd = float(int(Params().get("LateralTorqueKd", encoding="utf8")))*0.01
-      lateralTorqueKf = float(int(Params().get("LateralTorqueKf", encoding="utf8")))*0.01
-      self.pid._k_p = [[0], [lateralTorqueKp]]
-      self.pid._k_i = [[0], [lateralTorqueKi]]
-      self.pid._k_d = [[0], [lateralTorqueKd]]
-      self.pid.k_f = lateralTorqueKf
     elif self.paramsCount == 10:
-      self.lateralTorqueCustom = Params().get_bool("LateralTorqueCustom")
+      self.lateralTorqueCustom = int(Params().get("LateralTorqueCustom", encoding="utf8"))
       self.lateralTorqueAccelFactor = float(int(Params().get("LateralTorqueAccelFactor", encoding="utf8")))*0.001
       self.lateralTorqueFriction = float(int(Params().get("LateralTorqueFriction", encoding="utf8")))*0.001
-      if self.lateralTorqueCustom:
+      if self.lateralTorqueCustom > 0:
         self.torque_params.latAccelFactor = self.lateralTorqueAccelFactor
         self.torque_params.friction = self.lateralTorqueFriction
 

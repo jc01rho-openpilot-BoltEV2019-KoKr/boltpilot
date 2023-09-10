@@ -1,3 +1,7 @@
+#pragma once
+
+#include <tuple>
+
 #include <QMap>
 #include <QSoundEffect>
 #include <QString>
@@ -31,6 +35,7 @@ const std::tuple<AudibleAlert, QString, int> sound_list[] = {
   {AudibleAlert::ENGAGE2, "audio_engage.wav", 0},
   {AudibleAlert::DISENGAGE2, "audio_disengage.wav", 0},
   {AudibleAlert::SPEED_DOWN, "audio_speed_down.wav", 0},
+  {AudibleAlert::AUDIO_TURN, "audio_turn.wav", 0},
 };
 
 class Sound : public QObject {
@@ -41,8 +46,8 @@ protected:
   void update();
   void setAlert(const Alert &alert);
 
+  SubMaster sm;
   Alert current_alert = {};
   QMap<AudibleAlert, QPair<QSoundEffect *, int>> sounds;
-  SubMaster sm;
-  uint64_t started_frame;
+  int current_volume = -1;
 };

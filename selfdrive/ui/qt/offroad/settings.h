@@ -1,7 +1,9 @@
 #pragma once
 
+#include <map>
+#include <string>
+
 #include <QButtonGroup>
-#include <QFileSystemWatcher>
 #include <QFrame>
 #include <QLabel>
 #include <QPushButton>
@@ -10,6 +12,7 @@
 #include <QStackedLayout>
 
 
+#include "selfdrive/ui/qt/util.h"
 #include "selfdrive/ui/qt/widgets/controls.h"
 
 // ********** settings window + top-level panels **********
@@ -43,7 +46,6 @@ public:
 signals:
   void reviewTrainingGuide();
   void showDriverView();
-  void closeSettings();
 
 private slots:
   void poweroff();
@@ -66,6 +68,7 @@ public slots:
 private:
   Params params;
   std::map<std::string, ParamControl*> toggles;
+  ButtonParamControl *long_personality_setting;
 
   void updateToggles();
 };
@@ -89,7 +92,7 @@ private:
   ButtonControl *targetBranchBtn;
 
   Params params;
-  QFileSystemWatcher *fs_watch;
+  ParamWatcher *fs_watch;
 };
 
 

@@ -4,15 +4,15 @@
 import gc
 
 import cereal.messaging as messaging
-from common.realtime import set_realtime_priority
-from selfdrive.controls.lib.events import Events
-from selfdrive.dragonpilot.driver_monitor import DriverStatus
+from openpilot.common.realtime import set_realtime_priority
+from openpilot.selfdrive.controls.lib.events import Events
+from openpilot.selfdrive.dragonpilot.driver_monitor import DriverStatus
 from cereal import car
 
-from common.realtime import DT_DMON
+from openpilot.common.realtime import DT_DMON
 MAX_TERMINAL_ALERTS = 3  # not allowed to engage after 3 terminal alerts
 MAX_TERMINAL_DURATION = int(30 / DT_DMON)  # not allowed to engage after 30s of terminal alerts
-from common.realtime import Ratekeeper
+from openpilot.common.realtime import Ratekeeper
 
 def dpmonitoringd_thread(sm=None, pm=None):
   rk = Ratekeeper(20, print_delay_threshold=None)  # Keeps rate at 10 hz

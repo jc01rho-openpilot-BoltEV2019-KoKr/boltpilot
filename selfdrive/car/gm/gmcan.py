@@ -1,5 +1,10 @@
-from selfdrive.car import make_can_msg
-from selfdrive.car.gm.values import CAR
+import math
+
+from cereal import log
+from openpilot.common.conversions import Conversions as CV
+from openpilot.common.realtime import DT_CTRL
+from openpilot.selfdrive.car import make_can_msg
+from openpilot.selfdrive.car.gm.values import CAR, CruiseButtons, CanBus
 
 
 def create_buttons(packer, bus, idx, button):
@@ -20,10 +25,20 @@ def create_buttons(packer, bus, idx, button):
 
 
 def create_pscm_status(packer, bus, pscm_status):
-  checksum_mod = int(1 - pscm_status["HandsOffSWlDetectionStatus"]) << 5
-  pscm_status["HandsOffSWlDetectionStatus"] = 1
-  pscm_status["PSCMStatusChecksum"] += checksum_mod
-  return packer.make_can_msg("PSCMStatus", bus, pscm_status)
+  values = {s: pscm_status[s] for s in [
+    "HandsOffSWDetectionMode",
+    "HandsOffSWlDetectionStatus",
+    "LKATorqueDeliveredStatus",
+    "LKADriverAppldTrq",
+    "LKATorqueDelivered",
+    "LKATotalTorqueDelivered",
+    "RollingCounter",
+    "PSCMStatusChecksum",
+  ]}
+  checksum_mod = int(1 - values["HandsOffSWlDetectionStatus"]) << 5
+  values["HandsOffSWlDetectionStatus"] = 1
+  values["PSCMStatusChecksum"] += checksum_mod
+  return packer.make_can_msg("PSCMStatus", bus, values)
 
 
 def create_steering_control(packer, bus, apply_steer, idx, lkas_active):
@@ -92,14 +107,18 @@ def create_friction_brake_command(packer, bus, apply_brake, idx, enabled, near_s
   return packer.make_can_msg("EBCMFrictionBrakeCmd", bus, values)
 
 
-def create_acc_dashboard_command(packer, bus, enabled, target_speed_kph, lead_car_in_sight, fcw):
+def create_acc_dashboard_command(packer, bus, enabled, cruiseGap, target_speed_kph, lead_car_in_sight, fcw):
   target_speed = min(target_speed_kph, 255)
+  if not enabled:
+    gap = 0
+  else:
+    gap = cruiseGap
 
   values = {
     "ACCAlwaysOne": 1,
     "ACCResumeButton": 0,
     "ACCSpeedSetpoint": target_speed,
-    "ACCGapLevel": 3 * enabled,  # 3 "far", 0 "inactive"
+    "ACCGapLevel": gap,
     "ACCCmdActive": enabled,
     "ACCAlwaysOne2": 1,
     "ACCLeadCar": lead_car_in_sight,
@@ -161,6 +180,42 @@ def create_lka_icon_command(bus, active, critical, steer):
   else:
     dat = b"\x00\x00\x00"
   return make_can_msg(0x104c006c, dat, bus)
+
+
+def create_gm_cc_spam_command(packer, controller, CS, actuators):
+  # TODO: Cleanup the timing - normal is every 30ms...
+
+  cruiseBtn = CruiseButtons.INIT
+  # We will spam the up/down buttons till we reach the desired speed
+  # TODO: Apparently there are rounding issues.
+  speedSetPoint = int(round(CS.out.cruiseState.speed * CV.MS_TO_MPH))
+  speedActuator = math.floor(actuators.speed * CV.MS_TO_MPH)
+  speedDiff = (speedActuator - speedSetPoint)
+
+  # We will spam the up/down buttons till we reach the desired speed
+  rate = 0.64
+  if speedActuator < speedSetPoint == CS.CP.minEnableSpeed:
+    cruiseBtn = CruiseButtons.CANCEL
+    controller.apply_speed = 0
+  elif speedDiff < 0:
+    cruiseBtn = CruiseButtons.DECEL_SET
+    rate = 0.2
+    controller.apply_speed = speedSetPoint - 1
+  elif speedDiff > 0:
+    cruiseBtn = CruiseButtons.RES_ACCEL
+    controller.apply_speed = speedSetPoint + 1
+  else:
+    controller.apply_speed = speedSetPoint
+
+  # Check rlogs closely - our message shouldn't show up on the pt bus for us
+  # Or bus 2, since we're forwarding... but I think it does
+  # TODO: Cleanup the timing - normal is every 30ms...
+  if (cruiseBtn != CruiseButtons.INIT) and ((controller.frame - controller.last_button_frame) * DT_CTRL > rate):
+    controller.last_button_frame = controller.frame
+    idx = (CS.buttons_counter + 1) % 4  # Need to predict the next idx for '22-23 EUV
+    return [create_buttons(packer, CanBus.POWERTRAIN, idx, cruiseBtn)]
+  else:
+    return []
 
 
 def create_regen_paddle_command(packer, bus):

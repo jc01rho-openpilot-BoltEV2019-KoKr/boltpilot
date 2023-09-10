@@ -3,10 +3,10 @@ import math
 
 from cereal import car
 from opendbc.can.parser import CANParser
-from selfdrive.car.interfaces import RadarInterfaceBase
-from selfdrive.car.hyundai.values import DBC
-from common.params import Params
-from common.filter_simple import StreamingMovingAverage
+from openpilot.selfdrive.car.interfaces import RadarInterfaceBase
+from openpilot.selfdrive.car.hyundai.values import DBC
+from openpilot.common.params import Params
+from openpilot.common.filter_simple import StreamingMovingAverage
 
 RADAR_START_ADDR = 0x500
 RADAR_MSG_COUNT = 32
@@ -15,38 +15,19 @@ RADAR_MSG_COUNT = 32
 def get_radar_can_parser(CP):
 
   if CP.openpilotLongitudinalControl and (CP.sccBus == 0 or Params().get_bool("EnableRadarTracks")):
+    if DBC[CP.carFingerprint]['radar'] is None:
+      return None
 
-    signals = []
-    checks = []
-
-    for addr in range(RADAR_START_ADDR, RADAR_START_ADDR + RADAR_MSG_COUNT):
-      msg = f"RADAR_TRACK_{addr:x}"
-      signals += [
-        ("STATE", msg),
-        ("AZIMUTH", msg),
-        ("LONG_DIST", msg),
-        ("REL_ACCEL", msg),
-        ("REL_SPEED", msg),
-      ]
-      checks += [(msg, 50)]
+    messages = [(f"RADAR_TRACK_{addr:x}", 50) for addr in range(RADAR_START_ADDR, RADAR_START_ADDR + RADAR_MSG_COUNT)]
+    
     print("RadarInterface: RadarTracks..")
-    #return CANParser(DBC[CP.carFingerprint]['radar'], signals, checks, 1)
-    return CANParser('hyundai_kia_mando_front_radar_generated', signals, checks, 1)
+    #return CANParser(DBC[CP.carFingerprint]['radar'], messages, 1)
+    return CANParser('hyundai_kia_mando_front_radar_generated', messages, 1)
 
   else:
-    signals = [
-      # sig_name, sig_address, default
-      ("ObjValid", "SCC11"),
-      ("ACC_ObjStatus", "SCC11"),
-      ("ACC_ObjLatPos", "SCC11"),
-      ("ACC_ObjDist", "SCC11"),
-      ("ACC_ObjRelSpd", "SCC11"),
-    ]
-    checks = [
-      ("SCC11", 50),
-    ]
     print("RadarInterface: SCCRadar...")
-    return CANParser(DBC[CP.carFingerprint]['pt'], signals, checks, CP.sccBus)
+    messages = [("SCC11", 50)]    
+    return CANParser(DBC[CP.carFingerprint]['pt'], messages, CP.sccBus)
 
 
 class RadarInterface(RadarInterfaceBase):
@@ -65,9 +46,8 @@ class RadarInterface(RadarInterfaceBase):
     self.valid_prev = False
 
   def update(self, can_strings):
-    # This one causes my radar points to not work
-    # if self.radar_off_can or (self.rcp is None):
-    #   return super().update(None)
+    if not self.new_radar and (self.radar_off_can or (self.rcp is None)):
+      return super().update(None)
 
     vls = self.rcp.update_strings(can_strings)
     self.updated_messages.update(vls)

@@ -1,15 +1,18 @@
+import time
 import numpy as np
-from common.realtime import sec_since_boot, DT_MDL
-from common.numpy_fast import interp
-from selfdrive.controls.lib.lane_planner import LanePlanner
-from common.params import Params
-from system.swaglog import cloudlog
-from selfdrive.controls.lib.lateral_mpc_lib.lat_mpc import LateralMpc
-from selfdrive.controls.lib.lateral_mpc_lib.lat_mpc import N as LAT_MPC_N
-from selfdrive.controls.lib.drive_helpers import CONTROL_N, MIN_SPEED, get_speed_error
-from selfdrive.controls.lib.desire_helper import DesireHelper
+from openpilot.common.realtime import DT_MDL
+from openpilot.common.numpy_fast import interp
+from openpilot.system.swaglog import cloudlog
+from openpilot.selfdrive.controls.lib.lateral_mpc_lib.lat_mpc import LateralMpc
+from openpilot.selfdrive.controls.lib.lateral_mpc_lib.lat_mpc import N as LAT_MPC_N
+from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, MIN_SPEED, get_speed_error
+from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
 import cereal.messaging as messaging
 from cereal import log
+
+from openpilot.common.params import Params
+from openpilot.selfdrive.controls.lib.lane_planner import LanePlanner
+
 
 TRAJECTORY_SIZE = 33
 CAMERA_OFFSET = 0.04
@@ -27,7 +30,7 @@ STEERING_RATE_COST = 700.0
 
 
 class LateralPlanner:
-  def __init__(self, CP):
+  def __init__(self, CP, debug=False):
     self.DH = DesireHelper()
     self.LP = LanePlanner()
     self.readParams = 0
@@ -36,7 +39,6 @@ class LateralPlanner:
 
     self.pathOffset = float(int(Params().get("PathOffset", encoding="utf8")))*0.01
     self.pathCostApply = float(int(Params().get("PathCostApply", encoding="utf8")))*0.01
-    self.pathCostApplyLow = float(int(Params().get("PathCostApplyLow", encoding="utf8")))*0.01
     self.lateralMotionCost = float(int(Params().get("LateralMotionCost", encoding="utf8")))*0.01
     self.lateralAccelCost = float(int(Params().get("LateralAccelCost", encoding="utf8")))*0.01
     self.lateralJerkCost = float(int(Params().get("LateralJerkCost", encoding="utf8")))*0.01
@@ -60,6 +62,8 @@ class LateralPlanner:
     self.v_ego = 0.0
     self.l_lane_change_prob = 0.0
     self.r_lane_change_prob = 0.0
+
+    self.debug_mode = debug
     self.d_path_w_lines_xyz = np.zeros((TRAJECTORY_SIZE, 3))
 
     self.lat_mpc = LateralMpc()
@@ -67,7 +71,9 @@ class LateralPlanner:
 
     self.steeringRateCost = 700.
 
-  def reset_mpc(self, x0=np.zeros(4)):
+  def reset_mpc(self, x0=None):
+    if x0 is None:
+      x0 = np.zeros(4)
     self.x0 = x0
     self.lat_mpc.reset(x0=self.x0)
 
@@ -78,7 +84,6 @@ class LateralPlanner:
       self.useLaneLineSpeed = float(int(Params().get("UseLaneLineSpeed", encoding="utf8")))
       self.pathOffset = float(int(Params().get("PathOffset", encoding="utf8")))*0.01
       self.pathCostApply = float(int(Params().get("PathCostApply", encoding="utf8")))*0.01
-      self.pathCostApplyLow = float(int(Params().get("PathCostApplyLow", encoding="utf8")))*0.01
       self.steeringRateCost = float(int(Params().get("SteeringRateCost", encoding="utf8")))
     elif self.readParams == 50:
       self.lateralMotionCost = float(int(Params().get("LateralMotionCost", encoding="utf8")))*0.01
@@ -106,7 +111,7 @@ class LateralPlanner:
     lane_change_prob = self.LP.l_lane_change_prob + self.LP.r_lane_change_prob
     turn_prob = self.LP.l_turn_prob + self.LP.r_turn_prob
     # Lane change logic
-    self.DH.update(sm['carState'], sm['carControl'].latActive, lane_change_prob, md, turn_prob)
+    self.DH.update(sm['carState'], sm['carControl'].latActive, lane_change_prob, md, turn_prob, sm['navInstruction'], sm['roadLimitSpeed'], self.LP.lane_width)
 
     if self.v_ego*3.6 >= self.useLaneLineSpeed + 2:
       self.useLaneLineMode = True
@@ -125,22 +130,20 @@ class LateralPlanner:
       elif self.LP.lll_prob > 0.5 and self.LP.rll_prob > 0.5:
         self.lanelines_active_tmp = True
       self.lanelines_active = self.lanelines_active_tmp
-  
-      # Calculate final driving path and set MPC costs
-      if self.lanelines_active:
-        self.path_xyz = self.LP.get_d_path(self.v_ego, self.t_idxs, self.path_xyz)
       
     else:
       self.lanelines_active = False
 
+    # Calculate final driving path and set MPC costs
+    self.path_xyz = self.LP.get_d_path(self.v_ego, self.t_idxs, self.path_xyz, self.lanelines_active)
+
     self.path_xyz[:, 1] += self.pathOffset
 
-    pathCost = interp(self.v_ego, [30./3.6, 100/3.6], [self.pathCostApplyLow, self.pathCostApply])
     #steeringRateCost = interp(self.v_ego, [2., 10.], [self.steeringRateCost, self.steeringRateCost/3.])
     #self.lat_mpc.set_weights(pathCost, LATERAL_MOTION_COST,
     #                         LATERAL_ACCEL_COST, LATERAL_JERK_COST,
     #                         steeringRateCost)
-    self.lat_mpc.set_weights(pathCost, self.lateralMotionCost,
+    self.lat_mpc.set_weights(self.pathCostApply, self.lateralMotionCost,
                              self.lateralAccelCost, self.lateralJerkCost,
                              self.steeringRateCost)
 
@@ -167,7 +170,7 @@ class LateralPlanner:
 
     #  Check for infeasible MPC solution
     mpc_nans = np.isnan(self.lat_mpc.x_sol[:, 3]).any()
-    t = sec_since_boot()
+    t = time.monotonic()
     if mpc_nans or self.lat_mpc.solution_status != 0:
       self.reset_mpc()
       self.x0[3] = measured_curvature * self.v_ego
@@ -191,17 +194,27 @@ class LateralPlanner:
     lateralPlan.psis = self.lat_mpc.x_sol[0:CONTROL_N, 2].tolist()
 
     lateralPlan.curvatures = (self.lat_mpc.x_sol[0:CONTROL_N, 3]/self.v_ego).tolist()
-    lateralPlan.curvatureRates = [float(x/self.v_ego) for x in self.lat_mpc.u_sol[0:CONTROL_N - 1]] + [0.0]
+    lateralPlan.curvatureRates = [float(x.item() / self.v_ego) for x in self.lat_mpc.u_sol[0:CONTROL_N - 1]] + [0.0]
 
     lateralPlan.mpcSolutionValid = bool(plan_solution_valid)
     lateralPlan.solverExecutionTime = self.lat_mpc.solve_time
+    if self.debug_mode:
+      lateralPlan.solverCost = self.lat_mpc.cost
+      lateralPlan.solverState = log.LateralPlan.SolverState.new_message()
+      lateralPlan.solverState.x = self.lat_mpc.x_sol.tolist()
+      lateralPlan.solverState.u = self.lat_mpc.u_sol.flatten().tolist()
 
     lateralPlan.desire = self.DH.desire
     lateralPlan.useLaneLines = self.lanelines_active
     lateralPlan.laneChangeState = self.DH.lane_change_state
     lateralPlan.laneChangeDirection = self.DH.lane_change_direction
     lateralPlan.desireEvent = self.DH.desireEvent
-    lateralPlan.laneWidth = 3.7 # float(self.LP.lane_width)
+    lateralPlan.laneWidth = float(self.LP.lane_width)
+    lateralPlan.desireReady = self.DH.desireReady
+    lateralPlan.apNaviDistance = int(self.DH.apNaviDistance)
+    lateralPlan.apNaviSpeed = int(self.DH.apNaviSpeed)
+    lateralPlan.roadEdgeStat = self.DH.prev_road_edge_stat
+    lateralPlan.latDebugText = self.DH.latDebugText
 
     plan_send.lateralPlan.dPathWLinesX = [float(x) for x in self.d_path_w_lines_xyz[:, 0]]
     plan_send.lateralPlan.dPathWLinesY = [float(y) for y in self.d_path_w_lines_xyz[:, 1]]

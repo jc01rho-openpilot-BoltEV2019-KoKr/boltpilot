@@ -1,12 +1,13 @@
 #pragma once
 
+#include <memory>
+
 #include <QPushButton>
 #include <QStackedLayout>
 #include <QWidget>
 
 #include "common/util.h"
 #include "selfdrive/ui/ui.h"
-
 #include "selfdrive/ui/qt/widgets/cameraview.h"
 
 
@@ -22,8 +23,8 @@ class OnroadAlerts : public QWidget {
   Q_OBJECT
 
 public:
-  OnroadAlerts(QWidget *parent = 0) : QWidget(parent) {};
-  void updateAlert(const Alert &a, const QColor &color);
+  OnroadAlerts(QWidget *parent = 0) : QWidget(parent) {}
+  void updateAlert(const Alert &a);
 
 protected:
   void paintEvent(QPaintEvent*) override;
@@ -42,37 +43,42 @@ public:
 
 private:
   void paintEvent(QPaintEvent *event) override;
+  void changeMode();
 
   Params params;
   QPixmap engage_img;
   QPixmap experimental_img;
+  bool experimental_mode;
+  bool engageable;
+};
+
+
+class MapSettingsButton : public QPushButton {
+  Q_OBJECT
+
+public:
+  explicit MapSettingsButton(QWidget *parent = 0);
+
+private:
+  void paintEvent(QPaintEvent *event) override;
+
+  QPixmap settings_img;
 };
 
 // container window for the NVG UI
 class AnnotatedCameraWidget : public CameraWidget {
   Q_OBJECT
-  Q_PROPERTY(float speed MEMBER speed);
-  Q_PROPERTY(QString speedUnit MEMBER speedUnit);
-  Q_PROPERTY(float setSpeed MEMBER setSpeed);
-  Q_PROPERTY(float speedLimit MEMBER speedLimit);
-  Q_PROPERTY(bool is_cruise_set MEMBER is_cruise_set);
-  Q_PROPERTY(bool has_eu_speed_limit MEMBER has_eu_speed_limit);
-  Q_PROPERTY(bool has_us_speed_limit MEMBER has_us_speed_limit);
-  Q_PROPERTY(bool is_metric MEMBER is_metric);
-
-  Q_PROPERTY(bool dmActive MEMBER dmActive);
-  Q_PROPERTY(bool hideDM MEMBER hideDM);
-  Q_PROPERTY(bool rightHandDM MEMBER rightHandDM);
-  Q_PROPERTY(int status MEMBER status);
 
 public:
   explicit AnnotatedCameraWidget(VisionStreamType type, QWidget* parent = 0);
   void updateState(const UIState &s);
 
+  MapSettingsButton *map_settings_btn;
+
 private:
-  void drawIcon(QPainter &p, int x, int y, QPixmap &img, QBrush bg, float opacity);
   void drawText(QPainter &p, int x, int y, const QString &text, int alpha = 255);
 
+  QVBoxLayout *main_layout;
   ExperimentalButton *experimental_btn;
   QPixmap dm_img;
   float speed;
@@ -82,7 +88,7 @@ private:
   bool is_cruise_set = false;
   bool is_metric = false;
   bool dmActive = false;
-  bool hideDM = false;
+  bool hideBottomIcons = false;
   bool rightHandDM = false;
   float dm_fade_state = 1.0;
   bool has_us_speed_limit = false;
@@ -112,6 +118,9 @@ protected:
   
   void paintEvent(QPaintEvent *event) override;
   
+private:
+  ScreenRecoder* recorder;
+  std::shared_ptr<QTimer> record_timer;
 };
 
 // container for all onroad widgets
@@ -121,6 +130,10 @@ class OnroadWindow : public QWidget {
 public:
   OnroadWindow(QWidget* parent = 0);
   bool isMapVisible() const { return map && map->isVisible(); }
+  void showMapPanel(bool show) { if (map) map->setVisible(show); }
+
+signals:
+  void mapPanelRequested();
 
 private:
   void paintEvent(QPaintEvent *event);
@@ -138,5 +151,6 @@ private:
 
 private slots:
   void offroadTransition(bool offroad);
+  void primeChanged(bool prime);
   void updateState(const UIState &s);
 };

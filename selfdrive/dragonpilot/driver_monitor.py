@@ -3,7 +3,7 @@
 
 from cereal import car
 EventName = car.CarEvent.EventName
-from common.realtime import DT_DMON # 0.05 = 20hz
+from openpilot.common.realtime import DT_DMON # 0.05 = 20hz
 
 # ref (page15-16): https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:42018X1947&rid=2
 _AWARENESS_TIME = 30.*10.  # 30 secs limit without user touching steering wheels make the car enter a terminal status

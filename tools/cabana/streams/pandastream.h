@@ -1,13 +1,17 @@
 #pragma once
 
+#include <memory>
+#include <vector>
+
+#include <QComboBox>
+#include <QFormLayout>
+#include <QVBoxLayout>
+
 #include "tools/cabana/streams/livestream.h"
 #include "selfdrive/boardd/panda.h"
 
-struct BusConfig {
-  int can_speed_kbps = 500;
-  int data_speed_kbps = 2000;
-  bool can_fd = false;
-};
+const uint32_t speeds[] = {10U, 20U, 50U, 100U, 125U, 250U, 500U, 1000U};
+const uint32_t data_speeds[] = {10U, 20U, 50U, 100U, 125U, 250U, 500U, 1000U, 2000U, 5000U};
 
 struct PandaStreamConfig {
   QString serial = "";
@@ -40,5 +44,10 @@ public:
   QString title() override { return tr("&Panda"); }
 
 private:
-  QLineEdit *serial_edit;
+  void refreshSerials();
+  void buildConfigForm();
+
+  QComboBox *serial_edit;
+  QFormLayout *config_layout;
+  PandaStreamConfig config = {};
 };

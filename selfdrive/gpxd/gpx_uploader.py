@@ -23,11 +23,11 @@
 
 import os
 import time
-from common.params import Params
-from system.version import get_version
+from openpilot.common.params import Params
+from openpilot.system.version import get_version
 
 # for uploader
-from selfdrive.loggerd.xattr_cache import getxattr, setxattr
+from openpilot.selfdrive.loggerd.xattr_cache import getxattr, setxattr
 import glob
 import requests
 import json

@@ -4,8 +4,8 @@ import subprocess
 from typing import List, Optional
 from functools import lru_cache
 
-from common.basedir import BASEDIR
-from system.swaglog import cloudlog
+from openpilot.common.basedir import BASEDIR
+from openpilot.system.swaglog import cloudlog
 
 RELEASE_BRANCHES = ['release3-staging', 'dashcam3-staging', 'release3', 'dashcam3', 'nightly']
 TESTED_BRANCHES = RELEASE_BRANCHES + ['devel', 'devel-staging']
@@ -90,7 +90,7 @@ def is_comma_remote() -> bool:
   if origin is None:
     return False
 
-  return origin.startswith('git@github.com:commaai') or origin.startswith('https://github.com/commaai')
+  return origin.startswith(('git@github.com:commaai', 'https://github.com/commaai'))
 
 
 @cache
@@ -99,7 +99,7 @@ def is_tested_branch() -> bool:
 
 @cache
 def is_release_branch() -> bool:
-  return True #get_short_branch() in RELEASE_BRANCHES
+  return False #get_short_branch() in RELEASE_BRANCHES
 
 @cache
 def is_dirty() -> bool:
@@ -127,7 +127,7 @@ def is_dirty() -> bool:
 
 
 if __name__ == "__main__":
-  from common.params import Params
+  from openpilot.common.params import Params
 
   params = Params()
   params.put("TermsVersion", terms_version)

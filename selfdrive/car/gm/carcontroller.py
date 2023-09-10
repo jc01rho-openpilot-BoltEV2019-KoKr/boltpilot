@@ -1,15 +1,19 @@
-import math
 
 from cereal import car
-from common.conversions import Conversions as CV
-from common.numpy_fast import interp, clip
-from common.realtime import DT_CTRL
+from openpilot.common.conversions import Conversions as CV
+from openpilot.common.numpy_fast import interp, clip
+from openpilot.common.realtime import DT_CTRL
 from opendbc.can.packer import CANPacker
-from selfdrive.car import apply_driver_steer_torque_limits, create_gas_interceptor_command
-from selfdrive.car.gm import gmcan
-from selfdrive.car.gm.values import DBC, CanBus, CarControllerParams, CruiseButtons, CC_ONLY_CAR
+from openpilot.selfdrive.car import apply_driver_steer_torque_limits, create_gas_interceptor_command
+from openpilot.selfdrive.car.gm import gmcan
+from openpilot.selfdrive.car.gm.values import DBC, CanBus, CarControllerParams, CruiseButtons, GMFlags, CC_ONLY_CAR, EV_CAR
+import math
+import cereal.messaging as messaging
+import numpy as np
+## Boltpiot things
 from collections import deque
-
+from openpilot.common.params import Params
+##
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 NetworkLocation = car.CarParams.NetworkLocation
 LongCtrlState = car.CarControl.Actuators.LongControlState
@@ -74,10 +78,28 @@ class CarController:
 
     self.pedal_hyst_gap = 1.0
     self.pedal_gas_max = 0.3275
+    # self.current_pitch_debug = 0.0
+    #pitch :  캘리브레이션 설정창에 나오는 장치는 n 도 위로 보고있고.. 의 그것.
+    self.current_pitch = -100.0
+    self.default_pitch = -100.0
 
+
+    self.sm = messaging.SubMaster(['liveCalibration'])
 
 
   def update(self, CC, CS, now_nanos):
+
+    if self.frame % 10 == 0:
+      self.sm.update(0)
+
+
+    if self.sm.updated['liveCalibration']:
+      # self.current_pitch_debug = self.sm['liveCalibration'].liveCalibration.liveMpcDebug.currentPitch
+      if self.default_pitch == -100.0:
+        self.default_pitch = np.asarray(self.sm['liveCalibration'].rpyCalib)[1]
+      else :
+        self.current_pitch = np.asarray(self.sm['liveCalibration'].rpyCalib)[1]
+
     actuators = CC.actuators
     hud_control = CC.hudControl
     hud_alert = hud_control.visualAlert
@@ -124,7 +146,7 @@ class CarController:
     if self.CP.openpilotLongitudinalControl:
       # Gas/regen, brakes, and UI commands - all at 25Hz
 
-      if CC.longActive and actuators.accel < -0.45:
+      if CC.longActive and actuators.accel < -1.0:
         can_sends.append(gmcan.create_regen_paddle_command(self.packer_pt, CanBus.POWERTRAIN))
         actuators.regenPaddle = True  # for icon
       else:
@@ -169,15 +191,16 @@ class CarController:
         # TODO: JJS Detect saturated battery?
         if CS.single_pedal_mode:
 
-          if actuators.accel > 0.:
-            accGain = interp(CS.out.vEgo, [0., 5], [0.25, 0.275])
-          else:
-            accGain = interp(CS.out.vEgo, [0., 5], [0.25, 0.135])
+          self.pedal_gas_max = interp(CS.out.vEgo, [0.0, 5, 30], [0.20, 0.3275,  0.3725])
 
-          zero = interp(CS.out.vEgo,[0., 5], [0.156, 0.2165])
-          # accGain = interp(CS.out.vEgo,[0., 5], [0.25, 0.1667])
-          pedal_gas = clip((actuators.accel * accGain + zero), 0., self.pedal_gas_max)
-
+          # if actuators.accel > 0.:
+          #   accGain = interp(CS.out.vEgo, [0., 5], [0.23, 0.130])
+          # else:
+          #   accGain = interp(CS.out.vEgo, [0., 5], [0.23, 0.165])
+          accGain = 0.1429
+          accGain2 = interp(actuators.accel, [-3.5, 2], [0.1667, 0.1325])
+          zero = interp(CS.out.vEgo,[0., 5, 10, 30], [0, accGain2, 0.19, 0.265])
+          pedal_gas = clip((actuators.accel * accGain + zero), 0.0, 1.0)
 
           self.pedalGasRaw_valueStore = pedal_gas
 
@@ -187,9 +210,9 @@ class CarController:
         if not CC.longActive:
           pedal_gas = 0.0  # May not be needed with the enable param
 
-        self.pedal_hyst_gap = interp(CS.out.vEgo, [40.0 * CV.KPH_TO_MS, 100.0 * CV.KPH_TO_MS], [0.01, 0.0065])
-        pedal_final, self.pedal_steady = actuator_hystereses(pedal_gas, self.pedal_steady, self.pedal_hyst_gap)
-        pedal_gas = clip(pedal_final, 0., self.pedal_gas_max)
+        # self.pedal_hyst_gap = interp(CS.out.vEgo, [40.0 * CV.KPH_TO_MS, 100.0 * CV.KPH_TO_MS], [0.01, 0.0050])
+        # pedal_final, self.pedal_steady = actuator_hystereses(pedal_gas, self.pedal_steady, self.pedal_hyst_gap)
+        pedal_gas = clip(pedal_gas, 0., self.pedal_gas_max)
         if self.frame % 4 == 0:
           idx = (self.frame // 4) % 4
           can_sends.append(create_gas_interceptor_command(self.packer_pt, pedal_gas, idx))
@@ -201,6 +224,7 @@ class CarController:
       else:
         if self.frame % 4 == 0:
           idx = (self.frame // 4) % 4
+          stopping = actuators.longControlState == LongCtrlState.stopping
 
           at_full_stop = CC.longActive and CS.out.standstill
           near_stop = CC.longActive and (CS.out.vEgo < self.params.NEAR_STOP_BRAKE_PHASE)
@@ -208,17 +232,20 @@ class CarController:
           # GM Camera exceptions
           # TODO: can we always check the longControlState?
           if self.CP.networkLocation == NetworkLocation.fwdCamera and self.CP.carFingerprint not in CC_ONLY_CAR:
-            at_full_stop = at_full_stop and actuators.longControlState == LongCtrlState.stopping
+            at_full_stop = at_full_stop and stopping
             friction_brake_bus = CanBus.POWERTRAIN
 
           # GasRegenCmdActive needs to be 1 to avoid cruise faults. It describes the ACC state, not actuation
-          can_sends.append(gmcan.create_gas_regen_command(self.packer_pt, CanBus.POWERTRAIN, self.apply_gas, idx, CC.enabled, at_full_stop))
-          can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, friction_brake_bus, self.apply_brake, idx, CC.enabled, near_stop, at_full_stop, self.CP))
+          can_sends.append(gmcan.create_gas_regen_command(self.packer_pt, CanBus.POWERTRAIN, self.apply_gas, idx, CC.longActive, at_full_stop))
+          can_sends.append(gmcan.create_friction_brake_command(self.packer_ch, friction_brake_bus, self.apply_brake,
+                                                             idx, CC.longActive, near_stop, at_full_stop, self.CP))
 
-          # Send dashboard UI commands (ACC status)
-          send_fcw = hud_alert == VisualAlert.fcw
-          can_sends.append(gmcan.create_acc_dashboard_command(self.packer_pt, CanBus.POWERTRAIN, CC.enabled,
-                                                              hud_v_cruise * CV.MS_TO_KPH, hud_control.leadVisible, send_fcw))
+        # Send dashboard UI commands (ACC status)
+        send_fcw = hud_alert == VisualAlert.fcw
+        #can_sends.append(gmcan.create_acc_dashboard_command(self.packer_pt, CanBus.POWERTRAIN, CC.enabled, hud_control.cruiseGap,
+        #                                                    hud_v_cruise * CV.MS_TO_KPH, hud_control.leadVisible, send_fcw))
+        can_sends.append(gmcan.create_acc_dashboard_command(self.packer_pt, CanBus.POWERTRAIN, CC.longActive, hud_control.cruiseGap,
+                                                            hud_v_cruise * CV.MS_TO_KPH, hud_control.leadVisible, send_fcw))
 
       # Radar needs to know current speed and yaw rate (50hz),
       # and that ADAS is alive (10hz)
@@ -239,6 +266,15 @@ class CarController:
       if self.CP.networkLocation == NetworkLocation.gateway and self.frame % self.params.ADAS_KEEPALIVE_STEP == 0:
         can_sends += gmcan.create_adas_keepalive(CanBus.POWERTRAIN)
 
+      # TODO: integrate this with the code block below?
+      if (
+          (self.CP.flags & GMFlags.PEDAL_LONG.value)  # Always cancel stock CC when using pedal interceptor
+          or (self.CP.flags & GMFlags.CC_LONG.value and not CC.enabled)  # Cancel stock CC if OP is not active
+      ) and CS.out.cruiseState.enabled:
+        if (self.frame - self.last_button_frame) * DT_CTRL > 0.04:
+          self.last_button_frame = self.frame
+          can_sends.append(gmcan.create_buttons(self.packer_pt, CanBus.POWERTRAIN, (CS.buttons_counter + 1) % 4, CruiseButtons.CANCEL))
+
     else:
       # While car is braking, cancel button causes ECM to enter a soft disable state with a fault status.
       # A delayed cancellation allows camera to cancel and avoids a fault when user depresses brake quickly
@@ -248,11 +284,17 @@ class CarController:
       if (self.frame - self.last_button_frame) * DT_CTRL > 0.04:
         if self.cancel_counter > CAMERA_CANCEL_DELAY_FRAMES:
           self.last_button_frame = self.frame
-          if self.CP.carFingerprint in CC_ONLY_CAR:
-            can_sends.append(gmcan.create_buttons(self.packer_pt, CanBus.POWERTRAIN, CS.buttons_counter, CruiseButtons.CANCEL))
-          else:
-            can_sends.append(gmcan.create_buttons(self.packer_pt, CanBus.CAMERA, CS.buttons_counter, CruiseButtons.CANCEL))
-    if self.CP.networkLocation == NetworkLocation.fwdCamera and self.CP.carFingerprint not in CC_ONLY_CAR:
+########### ORIGIN
+    #       if self.CP.carFingerprint in CC_ONLY_CAR:
+    #         can_sends.append(gmcan.create_buttons(self.packer_pt, CanBus.POWERTRAIN, CS.buttons_counter, CruiseButtons.CANCEL))
+    #       else:
+    #         can_sends.append(gmcan.create_buttons(self.packer_pt, CanBus.CAMERA, CS.buttons_counter, CruiseButtons.CANCEL))
+    # if self.CP.networkLocation == NetworkLocation.fwdCamera and self.CP.carFingerprint not in CC_ONLY_CAR:
+########### FIXED
+          can_sends.append(gmcan.create_buttons(self.packer_pt, CanBus.CAMERA, CS.buttons_counter, CruiseButtons.CANCEL))
+
+    if self.CP.networkLocation == NetworkLocation.fwdCamera:
+########### DONE
       # Silence "Take Steering" alert sent by camera, forward PSCMStatus with HandsOffSWlDetectionStatus=1
       if self.frame % 10 == 0:
         can_sends.append(gmcan.create_pscm_status(self.packer_pt, CanBus.CAMERA, CS.pscm_status))
@@ -266,15 +308,21 @@ class CarController:
     lka_icon_status = (lka_active, lka_critical)
 
     # SW_GMLAN not yet on cam harness, no HUD alerts
-    if self.CP.networkLocation != NetworkLocation.fwdCamera and (self.frame % self.params.CAMERA_KEEPALIVE_STEP == 0 or lka_icon_status != self.lka_icon_status_last):
+
+
+    if self.CP.networkLocation != NetworkLocation.fwdCamera and \
+      (self.frame % self.params.CAMERA_KEEPALIVE_STEP == 0 or lka_icon_status != self.lka_icon_status_last):
+
       steer_alert = hud_alert in (VisualAlert.steerRequired, VisualAlert.ldw)
       can_sends.append(gmcan.create_lka_icon_command(CanBus.SW_GMLAN, lka_active, lka_critical, steer_alert))
       self.lka_icon_status_last = lka_icon_status
+
 
     actuators.pedalGas = self.pedalGas_valueStore
     actuators.pedalGasRaw = self.pedalGasRaw_valueStore
     actuators.pedalGasAvg = self.pedalGasAvg_valueStore
     actuators.aEgoAvg = self.aEgoAvg_valueStore
+
 
 
     new_actuators = actuators.copy()

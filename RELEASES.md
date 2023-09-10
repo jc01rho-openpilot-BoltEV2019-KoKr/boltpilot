@@ -1,3 +1,47 @@
+230801 - APILOT
+* APM(APilotMan)0.90: 포트변경, NDA와 구별하도록함.. 기존것은 접속안될수있음.
+  * 과속카메라작동방법: 3으로 하면 NDA 접속가능
+
+230726 - APILOT
+* APilotMan 0.81 : 구간단속
+
+230714 - APILOT
+========================
+* NOO Helper - 0:None,1:Mappy,Waze, 2:시험
+
+230711 - APILOT
+========================
+* NOO Helper - 0:None,1:Openpilot,2:Mappy
+* HDA Speed limit
+* 일부 차량 가감속 불량해결(KONA_EV외)
+
+
+230528 - APILOT
+========================
+* 크루즈버튼 속도단위설정
+* UI일부수정
+
+230525-1 - APILOT
+========================
+* Torque AccelFactor, Friction수동설정 (조향튜닝)
+* StartAccel(가속초기속도) 적용시 : Jerk: 1
+* UI일부수정
+* 신호감지기능수정
+
+230525 - APILOT
+========================
+* 추월가속시 전방차량발견 거리 수정
+* 커브속도조절비율진입: 시험중..
+* 3분마다 liveTorqueData 저장
+* 신호인식 mix
+
+230522 - APILOT
+========================
+* deviceState : 표시방식 변경
+* 추월가속시 전방차량발견하면 롱컨OFF
+* AlertEvent 표시방식 변경
+
+
 230405a - APILOT
 ========================
 * 주요변경내용

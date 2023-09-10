@@ -1,6 +1,4 @@
-=======================
-APILOT inegration temporary readme
-
+APILOT
 ------
 * PREVIEW
 
@@ -15,6 +13,10 @@ APILOT inegration temporary readme
   ![image](https://user-images.githubusercontent.com/43668841/231068460-11c7977a-feaa-4f1c-b4be-263d4132d213.png)
 
 * 읽어보기
+  * Ver 23.08.01부터 APM0.90으로 업뎃해야하며, NDA와 APM동시지원 안됨
+  * NDA와 APM을 같이 사용하려면
+    * APM0.85 사용
+    * 감속제어: 과속카메라 작동방법: 3 으로 하고 재시작 (단, APM090 연결안됨)
   * 설정값을 함부로 건들면 사고의 위험이 있으며, 사고/고장 발생시 본인의 책임입니다.
   * Panda코드를 수정하였으므로, comma connect에 연결되면 BAN당함(연결되어도 업로드안됨)!
   * 배선개조: SCC모듈(레이더)의 CCAN연결을 절단 -> 판다의 CAN2에 연결
@@ -45,35 +47,25 @@ APILOT inegration temporary readme
     * 2단계: 안전주행모드,
     * 3단계: 일반주행,
     * 4단계: 고속모드 (신호감지안함)
-  * 레인체인지시작조건(오토턴기능켠경우)    
-    * 정지출발
-      * 깜박이: 오토턴시작
-    * 저속(레인체인지속도 이하)
-      * 경계검출: 오토턴
-      * 깜박이(우) + 핸들토크: 우회전
-      * 깜박이(우): 레인체인지
-      * 깜박이(좌) + 핸들토크: 좌회전
-    * 중속 (80키로미만)
-      * 깜박이(좌/우) + 브레이크 + 경계검출(X) + 핸들토크: 오토턴
-      * 깜박이(좌/우) + 브레이크 + 경계검출(X): 레인체인지
-      * 깜박이(우) + 브레이크 + 경계검출(우) + 턴속도미만: 오토턴
-      * 깜박이(우) + 브레이크 + 경계검출(우) + 핸들토크: 오토턴
-      * 깜박이(우) + 브레이크 + 경계검출(우) : 레인체인지
-      * 깜박이(좌) + 브레이크 + 경계검출(좌) + 턴속도미만: 오토턴
-      * 깜박이(좌) + 브레이크 + 경계검출(좌) + 핸들토크: 오토턴
-      * 깜박이(좌) + 브레이크 + 경계검출(좌) : 오토턴
-      * 깜박이(좌/우) + 브레이크(X) : 레인체인지
-    * 고속
-      * 깜박이(좌/우): 레인체인지
-  * 레인체인진진행중
-    * 깜박이(X) : 중지    
-    * BSD검출: 핸들토크 기다림.
-    * 경계검출: 검출이 끝나고 차선변경시작
-    * 깜박이(우)+경계검출+턴속도미만: 오토턴
-    * 핸들토크발생: 같은방향이면 턴으로 변경, 반대방향 차선변경 취소
-    * 연속차선변경: 핸들토크필요, 레인체인지 완료 후 깜박이 켜져있으면 
-  * 오토턴진행중
-    * 핸들토크(반대): 취소
+  * NOO Helper (Navigate On Openpilot)
+    * 이 기능은 C3의 경우 자체네비, C2의 경우 외부네비(Mappy)를 이용한 조향 및 턴제어 보조 기능입니다(시험용)
+    * NOO Helper를 1로 변경하면 작동
+    * APM(APilotMan 필수설치(첨부)
+    * Mappy 설치 (첨부)
+    * PC에 폰을 연결하고 다음을 실행해야함. (필수)
+      * adb shell pm grant com.ajouatom.apilotman android.permission.READ_LOGS
+        * https://kibua20.tistory.com/165
+        * https://forbes.tistory.com/1256
+    * 확인방법: Mappy실행 후 목적지설정하고 나서, ApilotMan화면에 메시지출력이 나오면 정상작동
+    * 작동방법
+      * Mappy/Waze/Tmap 으로부터 TBT정도 수신
+      * 200M부터 작동대기
+      * 좌/우 차로변경: 램프진입, 진출, 합류지점
+        * 우측차로변경: 깜박이 또는 조향토크작동시 로드엣지벗어나면 차로변경 시작(깜박이 없이 차로변경 시험중)
+        * 좌측차로변경: 깜박이 또는 조향토크작동시 차로변경 시작         
+      * 좌/우 턴
+        * 턴진입 200미터전 : 좌/우 차로변경시작 (로드에지, BSD작동시 안함)
+        * 턴진입 50미터전: 좌/우 턴시작
 
 * 설정: 토글
   * Experimental openpilot Longitudinal Control(롱컨트롤)
@@ -310,26 +302,13 @@ APILOT inegration temporary readme
   
 
 ![](https://i.imgur.com/b0ZyIx5.jpg)
-=======================
-
-
-# For foreign users (non Korean.)
-### 2022-12-21
-- full clean wipe & factory reset the device when you read this first time.
-- try fine tuning with "https://github.com/jc01rho-openpilot-BoltEV2019-KoKr/boltpilot/blob/release/nTune-1.7.1-legacy-minSDK23.apk"
-
-=======================
-![boltpilot](https://i.imgur.com/azNrGqZ.gif)
 
 Table of Contents
 =======================
 
-* [What is boltpilot?](#what-is-boltpilot)
-* [Hardware requirements](#hardware-requirements)
-* [Hardware installation](#hardware-installation)
-* [Software installation](#software-installation)
-* [Boltpilot usage](#usage)
-* [Donations](#donations)
+* [What is openpilot?](#what-is-openpilot)
+* [Running in a car](#running-on-a-dedicated-device-in-a-car)
+* [Running on PC](#running-on-pc)
 * [Community and Contributing](#community-and-contributing)
 * [User Data and comma Account](#user-data-and-comma-account)
 * [Safety and Testing](#safety-and-testing)
@@ -337,93 +316,6 @@ Table of Contents
 * [Licensing](#licensing)
 
 ---
-
-
-What is boltpilot?
-------
-
-This "boltpilot" fork is a community supported fork of the open source driver assistance system called openpilot. Although the Bolt EV is not currently supported by Comma.ai in the main openpilot release, this customized fork fills that gap. Boltpilot was designed spefically for Chevrolet Bolt EV models that lack ACC (Adaptive Cruise Control). Compatibility has been verified with 2017, 2018 and 2019 Bolt EV models with lane keep assist. More recent year models might also be compatible but have not yet been tested.
-
-Currently, boltpilot performs the functions of Adaptive Cruise Control (ACC) and Automated Lane Centering (ALC). It will control your steering wheel to keep your vehicle centred in the lane and can optionally also control your vehicle's speed. The system does not offer full self-driving capabilities and will not, for example, stop for red lights or stop signs, although some of these features are currently under development by Comma.ai. The driver must remain alert and able to take control at all times. 
-
-This is an experimental application used for research and development. It is not a product and carries no warranty exporessed or implied. Use at your own risk. Issue reports are welcome via github, or contact rkjnice@gmail.com.
-
-
-Hardware requirements
-------
-
-This Bolt-specific fork requires a Comma 3 device (https://comma.ai/shop), a harness box (https://comma.ai/shop/products/harness-box), a custom wiring harness made for GM vehicles (make your own or purchase one online), and a pedal interceptor designed specifically for GM vehicles (make your own or purchase one online). 
-
-Making a custom Bolt EV wiring harness and pedal interceptor requires specialized equipment and considerable skill. However, both of these devices are currently available for purchase from BearTechWorkshop's Etsy store (https://www.etsy.com/ca/shop/BearTechWorkshop).
-
-Earlier comma devices including the Comma 2 and Eon are not supported by the actively maintained branches of this fork. If you intend on using a Comma 2 or Eon you must use the comma2_Eon-final branch, and you may need additional hardware as described in the Chevy-Bolt openpilot Wiki (https://github.com/commaai/openpilot/wiki/Chevy-Bolt).
-
-
-Hardware installation
-------
-
-A video showing installation of a Comma 2 into a Bolt EV can be found at https://www.youtube.com/watch?v=5D21wzCcycE. Installation of the Comma 3 requires the same basic procedure.
-
-A video showing installation of a pedal interceptor on a Bolt EV can be found here: https://www.youtube.com/watch?v=wLepOnjGoh8
-
-Thanks to Jason Shuler of Stand Back Labs for making these videos available.
-
-
-Software installation
-------
-
-1. Select your WiFi network and enter Wi-Fi password on your Comma 3 device.
-
-2. When asked to choose between Dashcam and Custom Software, choose Custom Software and enter the URL https://smiskol.com/fork/jc01rho-openpilot-BoltEV2019-KoKr/[branch] where [branch] is the desired branch name. For example, to install the 'develop' branch, enter https://smiskol.com/fork/jc01rho-openpilot-BoltEV2019-KoKr/develop. The 'develop' branch is currently recommended for most purposes as it is actively maintained and contains the most up-to-date changes and features. You can also use the shortcut https://tiny.one/boltpilot-develop to install the 'develop' branch. This will automatically redirect to the longer URL listed above.
-
-3. Your device will reboot after installation. When prompted, scroll to accept the terms and conditions, then follow the on-screen instructions to complete the openpilot training.
-
-4. Click the Gear icon to open settings. Under the 'Toggles' menu, ensure 'Enable openpilot' and 'Use Metric System' toggles are enabled. This fork is not compatible with imperial measures. 
-
-5. Under the 'Vehicle' settings, ensure the 'Use Comma Pedal' toggle is enabled. The two buttons at the top of the Vehicle settings are used to set steering control and vehicle settings. Click the top right button and select 'Chevrolet Bolt EV' for your vehicle. Next, click the top left button and select the type of steering control you wish to use. Each option represents a a different mathematical approach for steering control calculations. Good results have been reported with the PID, TORQUE and LQR options. The INDI option will soon be phased out. You may wish to experiment with all steering control options to determine which one produces the best results on your vehicle. Reboot your device by selecting the 'Device' menu, and then press the 'Reboot' button. Important: you must reboot your device after changing steering control options for the settings to take effect. 
-
-
-Boltpilot usage
-------
-
-Calibration: Your device requires a one-time calibration after software installation. This takes only a couple minutes and will occur automatically at the beginning of your first drive.
-
-Gear selection: This fork is designed for use in L-mode only. You must place the gear shifter in L. Your vehicle's regenerative braking will be used to lower the speed when requried.
-
-Bolt pilot has two main operation modes: (1) full control mode, which controls both steering and speed, and (2) lateral control mode, which controls only the steering.
-
-Full control mode: To engage both steering and speed control, make sure the stock cruise control is turned off, and then while driving press the Set/- button (bottom button on the left steering wheel control pad). Pressing the X (left) keypad button or the brake pedal will disengage openpilot. 
-
-Lateral control mode: Use the stock cruise control button (right button on steering wheel keypad) to toggle steering control only. 
-
-
-Acknowledgments
-------
-
-This fork is maintained by @whrho (Discord user @jc01rho) of Korea (kjnice@gmail.com). Special thanks to Jason Shuler of Stand Back Labs for his extensive openpilot development work on GM vehicles--especially the Bolt EV, GM giraffe, GM harness, GM Pedal, pedal firmware, and panda coding. Without his work the creation of this fork would not have been possible. Starting with version 0.8.14 this fork is based on the work of @neokii with the Hyundai-Kia fork. Thanks to hanabi95 (@hanabi95) for safety and CAN bus related content. Thank you @Hammie K for the lat_icon_image, and @neokii for the screenrecorder.
-
-
-Donations
-------
-
-If you find this fork useful, please consider donating to support the continued development and maintenance. Donations can be made at https://jc01rho.com/donation
-
-
-# 볼트EV + 콤마3 전용 오픈파일럿 포크
-
-### 콤마2 혹은 lepro 이온 사용불가합니다. comma2_Eon-final을 사용하세요.
-### 일반 사용자분들은 "develop" 혹은 "release" 브랜치를 사용하세요. 버전이 올라가도 최신을 그곳에 유지하겠습니다.
-### 0.8.14부터 @neokii님의 HKG향 코드를 기반으로 하고있습니다. 항상 감사드립니다.
-### pedal 사용자의 경우 옵션에서 켜주셔야합니다 꼭.
-
-- hanabi95(@hanabi95) 님의 작업에서 safety 및 can 관련 내용을 기본으로 하고 있습니다. 항상 감사드립니다.
-- lat_icon_image, thanks to @Hammie K 
-- screenrecorder, thanks to neokii
-
-### 문의사항은 오카방 혹은 이슈 생성으로 주십시오. 감사합니다.
-#### working tested : BoltEV premier 2017, 2018, 2019
-rkjnice@gmail.com
-
 
 What is openpilot?
 ------
@@ -485,7 +377,7 @@ And [follow us on Twitter](https://twitter.com/comma_ai).
 User Data and comma Account
 ------
 
-By default, openpilot uploads the driving data to comma.ai's servers. You can also access your data through [comma connect](https://connect.comma.ai/). We use your data to train better models and improve openpilot for everyone.
+By default, openpilot uploads the driving data to our servers. You can also access your data through [comma connect](https://connect.comma.ai/). We use your data to train better models and improve openpilot for everyone.
 
 openpilot is open source software: the user is free to disable data collection if they wish to do so.
 
@@ -558,5 +450,3 @@ NO WARRANTY EXPRESSED OR IMPLIED.**
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/commaai/openpilot.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/commaai/openpilot/context:python)
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/commaai/openpilot.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/commaai/openpilot/context:cpp)
 [![codecov](https://codecov.io/gh/commaai/openpilot/branch/master/graph/badge.svg)](https://codecov.io/gh/commaai/openpilot)
-
-
